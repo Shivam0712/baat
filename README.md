@@ -74,9 +74,9 @@ Each phrase has a **mastery score** from 0 to 100, starting at 0.
 
 | Color | Range | Meaning |
 |-------|-------|---------|
-| 🔵 Cold | 0–33 | Needs work |
-| 🟡 Warm | 34–66 | Learning |
-| 🔴 Hot  | 67–100 | Learned |
+| 🔵 Cold | 0–4 | Needs work |
+| 🟡 Warm | 5–15 | Learning |
+| 🔴 Hot  | 16+ | Learned |
 
 - **Browsing** a phrase: +1 mastery.
 - **Game correct** / **Flashcard "Knew it"**: +1 mastery.
