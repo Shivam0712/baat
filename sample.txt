@@ -1,0 +1,39 @@
+English: Hello
+Translation: สวัสดี
+Phonetics: sa-wat-dee
+Note: Used when greeting someone. Add ครับ (khrap) if male, ค่ะ (kha) if female to be polite.
+
+English: Thank you
+Translation: ขอบคุณ
+Phonetics: khop-khun
+Note: Add ครับ or ค่ะ at the end for a more polite form.
+
+English: How much is this?
+Translation: อันนี้เท่าไหร่
+Phonetics: an-nee tao-rai
+Note: Point at the item when asking. Very useful when shopping at markets.
+
+English: Excuse me
+Translation: ขอโทษ
+Phonetics: kho-tot
+Note: Used both to apologize and to get someone's attention.
+
+English: Water please
+Translation: ขอน้ำหน่อย
+Phonetics: kho-nam-noi
+Note: หน่อย (noi) softens the request. Works at restaurants or when asking a host.
+
+English: Where is the bathroom?
+Translation: ห้องน้ำอยู่ที่ไหน
+Phonetics: hong-nam-yu-tee-nai
+Note: ห้องน้ำ literally means "water room". Essential phrase for travellers.
+
+English: I don't understand
+Translation: ไม่เข้าใจ
+Phonetics: mai-kao-jai
+Note: ไม่ (mai) means "no/not". You can also say ไม่เข้าใจครับ/ค่ะ to be polite.
+
+English: Delicious
+Translation: อร่อย
+Phonetics: a-roi
+Note: A great compliment to give after a meal. Locals love hearing this from visitors.

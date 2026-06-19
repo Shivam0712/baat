@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <title>Baat</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b0b12" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Baat">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- VIEW: Browse -->
+  <section class="view is-active" id="view-browse" data-view="browse">
+    <header class="topbar">
+      <h1 class="topbar__title">Baat</h1>
+      <span class="topbar__sub" id="browse-count"></span>
+    </header>
+    <div class="browse__stage" id="browse-stage"></div>
+    <div class="browse__actions">
+      <button class="btn-shuffle" id="btn-shuffle">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        Shuffle
+      </button>
+    </div>
+  </section>
+
+  <!-- VIEW: Library -->
+  <section class="view" id="view-library" data-view="library">
+    <header class="topbar">
+      <h1 class="topbar__title">Library</h1>
+      <div class="topbar__actions">
+        <button class="topbar__btn" id="btn-settings" aria-label="Settings">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="topbar__btn" id="btn-add" aria-label="Add phrase">
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="library__tools">
+      <label class="upload">
+        <input type="file" id="file-upload" accept=".txt,text/plain" hidden>
+        <span class="upload__label">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          Import .txt
+        </span>
+      </label>
+      <div class="legend">
+        <span class="legend__item"><i class="dot dot--cold"></i>Cold</span>
+        <span class="legend__item"><i class="dot dot--warm"></i>Warm</span>
+        <span class="legend__item"><i class="dot dot--hot"></i>Hot</span>
+      </div>
+    </div>
+    <ul class="list" id="list"></ul>
+    <div class="empty" id="library-empty" hidden>
+      <p class="empty__title">No phrases yet</p>
+      <p class="empty__hint">Tap + to add one, or import a .txt file.</p>
+    </div>
+  </section>
+
+  <!-- VIEW: Practice -->
+  <section class="view" id="view-practice" data-view="practice">
+    <header class="topbar">
+      <h1 class="topbar__title">Practice</h1>
+    </header>
+    <div class="practice__hub" id="practice-hub">
+      <button class="tile" data-game="match">
+        <img class="tile__icon tile__icon--img" src="icons/MatchUp.png" alt="Match-up">
+        <span class="tile__name">Match-up</span>
+        <span class="tile__desc">Pair phrase to sound</span>
+      </button>
+      <button class="tile" data-game="choice">
+        <img class="tile__icon tile__icon--img" src="icons/MultipleChoices.png" alt="Multiple choice">
+        <span class="tile__name">Multiple choice</span>
+        <span class="tile__desc">Pick the right sound</span>
+      </button>
+      <button class="tile" data-game="listen">
+        <img class="tile__icon tile__icon--img" src="icons/ListenChoose.png" alt="Listen &amp; choose">
+        <span class="tile__name">Listen &amp; choose</span>
+        <span class="tile__desc">Hear it, find it</span>
+      </button>
+      <button class="tile" data-game="flip">
+        <img class="tile__icon tile__icon--img" src="icons/FalshCards.png" alt="Flashcards">
+        <span class="tile__name">Flashcards</span>
+        <span class="tile__desc">Flip and self-rate</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Tab bar -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab is-active" data-target="browse">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      <span>Browse</span>
+    </button>
+    <button class="tab" data-target="library">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Library</span>
+    </button>
+    <button class="tab" data-target="practice">
+      <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <span>Practice</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Editor Sheet -->
+<div id="editor" class="sheet" hidden>
+  <div class="sheet__backdrop" data-close></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+    <div class="sheet__grip"></div>
+    <h2 class="sheet__title" id="editor-title">Add phrase</h2>
+    <label class="field">
+      <span class="field__label">Phrase</span>
+      <textarea id="f-input" rows="2" placeholder="e.g. Hello"></textarea>
+    </label>
+    <label class="field">
+      <span class="field__label">Translation</span>
+      <textarea id="f-translation" rows="2" placeholder="e.g. สวัสดี"></textarea>
+    </label>
+    <label class="field">
+      <span class="field__label">Phonetics</span>
+      <textarea id="f-phonetics" rows="2" placeholder="e.g. sa-wat-dee"></textarea>
+    </label>
+    <label class="field">
+      <span class="field__label">Note</span>
+      <textarea id="f-note" rows="2" placeholder="e.g. Used when greeting someone formally"></textarea>
+    </label>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-cancel">Cancel</button>
+      <button class="btn btn--primary" id="btn-save">Save</button>
+    </div>
+    <button class="btn btn--danger" id="btn-delete" hidden>Delete phrase</button>
+  </div>
+</div>
+
+<!-- Settings Sheet -->
+<div id="settings" class="sheet" hidden>
+  <div class="sheet__backdrop" data-close></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="sheet__grip"></div>
+    <h2 class="sheet__title" id="settings-title">Settings</h2>
+    <label class="field">
+      <span class="field__label">Speech language</span>
+      <select id="set-lang"></select>
+    </label>
+    <p class="set-note" id="lang-note" hidden>No voice for this language on this device — playback may sound off.</p>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-export">Export backup</button>
+      <button class="btn btn--ghost" id="btn-import-trigger">Import backup</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json,.json" hidden>
+    <p class="set-stat" id="set-stat"></p>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-close-settings">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Dialog -->
+<div id="confirm" class="confirm" hidden>
+  <div class="confirm__backdrop" data-close></div>
+  <div class="confirm__panel" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 class="confirm__title" id="confirm-title"></h2>
+    <p class="confirm__msg" id="confirm-msg"></p>
+    <div class="confirm__row">
+      <button class="btn btn--ghost" id="confirm-no">Cancel</button>
+      <button class="btn btn--danger" id="confirm-yes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" hidden></div>
+
+<!-- Game overlay -->
+<div id="game" class="game" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>
