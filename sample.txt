@@ -1,39 +1,39 @@
 English: Hello
 Translation: สวัสดี
 Phonetics: sa-wat-dee
-Note: Used when greeting someone. Add ครับ (khrap) if male, ค่ะ (kha) if female to be polite.
+Note: Used when greeting someone. Add "khrap" if you are male or "kha" if you are female to make it polite. It can also be used when saying goodbye in formal situations.
 
 English: Thank you
 Translation: ขอบคุณ
 Phonetics: khop-khun
-Note: Add ครับ or ค่ะ at the end for a more polite form.
+Note: The standard way to say "thank you." Add "khrap" (male) or "kha" (female) at the end to sound more polite.
 
 English: How much is this?
 Translation: อันนี้เท่าไหร่
 Phonetics: an-nee tao-rai
-Note: Point at the item when asking. Very useful when shopping at markets.
+Note: Point at the item while asking. Very useful when shopping at markets, street stalls, or small shops.
 
 English: Excuse me
 Translation: ขอโทษ
 Phonetics: kho-tot
-Note: Used both to apologize and to get someone's attention.
+Note: Used both to apologize and to politely get someone's attention before asking a question.
 
 English: Water please
 Translation: ขอน้ำหน่อย
 Phonetics: kho-nam-noi
-Note: หน่อย (noi) softens the request. Works at restaurants or when asking a host.
+Note: "Noi" softens the request, making it sound more polite and natural. Commonly used at restaurants or when asking someone for a glass of water.
 
 English: Where is the bathroom?
 Translation: ห้องน้ำอยู่ที่ไหน
 Phonetics: hong-nam-yu-tee-nai
-Note: ห้องน้ำ literally means "water room". Essential phrase for travellers.
+Note: Literally means "Where is the water room?" This is one of the most useful phrases for travelers.
 
 English: I don't understand
 Translation: ไม่เข้าใจ
 Phonetics: mai-kao-jai
-Note: ไม่ (mai) means "no/not". You can also say ไม่เข้าใจครับ/ค่ะ to be polite.
+Note: Means "I don't understand." Add "khrap" (male) or "kha" (female) to sound more polite when speaking to someone.
 
 English: Delicious
 Translation: อร่อย
 Phonetics: a-roi
-Note: A great compliment to give after a meal. Locals love hearing this from visitors.
+Note: Used to compliment food. Saying "a-roi mak" means "very delicious," and locals usually appreciate hearing it.
