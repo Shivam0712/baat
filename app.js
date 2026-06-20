@@ -1530,8 +1530,11 @@ function startSentenceBuilder() {
     const phonetic = $('#sb-textbox').value.trim();
     if (!phonetic) { toast('Tap a word on the wheel first'); return; }
 
-    const match = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase());
-    currentPhrase = match || null;
+    // currentPhrase is set by the last wheel tap; fall back to text match
+    if (!currentPhrase) {
+      currentPhrase = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase()) || null;
+    }
+    const match = currentPhrase;
     judged = false;
 
     $('#sb-r-phonetic').textContent = phonetic;
