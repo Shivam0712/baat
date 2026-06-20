@@ -671,9 +671,9 @@ function startMaster10() {
     const hot  = shuffle(phrases.filter(p => band(p.mastery) === 'hot'));
     const pick = (pool, n) => pool.slice(0, n);
     const picks = [];
-    const hotPicks  = pick(hot,  2);
-    const warmPicks = pick(warm, 3);
-    const coldPicks = pick(cold, 5 + (2 - hotPicks.length) + (3 - warmPicks.length));
+    const hotPicks  = pick(hot,  1);
+    const warmPicks = pick(warm, 4);
+    const coldPicks = pick(cold, 6 + (1 - hotPicks.length) + (4 - warmPicks.length));
     picks.push(...hotPicks, ...warmPicks, ...coldPicks);
     // if still under 10 (not enough phrases total), just fill from remaining
     if (picks.length < Math.min(10, phrases.length)) {
