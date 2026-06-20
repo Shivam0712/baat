@@ -633,9 +633,13 @@ $('#import-file').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await f.text());
     if (!data || !Array.isArray(data.phrases)) throw 0;
-    confirmDialog('Import backup?', 'New phrases will be merged into your library.', () => {
+    confirmDialog('Import backup?', 'New phrases and wishlist items will be merged into your library.', () => {
       const existing = new Set(state.phrases.map(p => p.id));
       data.phrases.forEach(p => { if (!existing.has(p.id)) state.phrases.push(p); });
+      if (Array.isArray(data.wishlist)) {
+        const existingWish = new Set(state.wishlist.map(w => w.toLowerCase()));
+        data.wishlist.forEach(w => { if (!existingWish.has(w.toLowerCase())) state.wishlist.push(w); });
+      }
       if (data.settings?.lang) state.settings.lang = data.settings.lang;
       save();
       renderLibrary();
