@@ -1421,37 +1421,39 @@ function startSentenceBuilder() {
   const phrases = state.phrases
     .filter(p => p.phonetics)
     .slice()
-    .sort((a, b) => (a.phonetics || '').localeCompare(b.phonetics || ''));
+    .sort((a, b) => a.phonetics.localeCompare(b.phonetics));
+
+  if (!phrases.length) {
+    gameEl.hidden = true;
+    toast('No phrases with phonetics found.');
+    return;
+  }
+
+  // Slot machine constants
+  const ITEM_H = 52;   // height of each row
+  const PAD    = 104;  // = 2 × ITEM_H, so first/last item can center
 
   let score = { right: 0, wrong: 0 };
   let currentPhrase = null;
   let judged = false;
 
-  function scoreLabel() { return `Right: ${score.right} · Wrong: ${score.wrong}`; }
-
-  const ITEM_H = 44;
-  const VISIBLE = 5;
-  const PAD = Math.floor(VISIBLE / 2) * ITEM_H;
-
   gameEl.innerHTML = `
     <div class="game__bar">
       <button class="game__close" id="sb-close" aria-label="Close">✕</button>
-      <span class="game__score" id="sb-score">${scoreLabel()}</span>
+      <span class="game__score" id="sb-score">Right: 0 · Wrong: 0</span>
     </div>
-    <div class="sb-body" id="sb-body">
+    <div class="sb-body">
       <div class="sb-build" id="sb-build">
         <div class="sb-wheel-wrap">
           <div class="sb-wheel" id="sb-wheel">
-            <div style="height:${PAD}px"></div>
+            <div style="height:${PAD}px;flex-shrink:0"></div>
             ${phrases.map(p => `<div class="sb-wheel-item" data-id="${p.id}">${esc(p.phonetics)}</div>`).join('')}
-            <div style="height:${PAD}px"></div>
+            <div style="height:${PAD}px;flex-shrink:0"></div>
           </div>
-          <div class="sb-wheel-fade sb-wheel-fade--top"></div>
-          <div class="sb-wheel-fade sb-wheel-fade--bot"></div>
           <div class="sb-wheel-selector"></div>
         </div>
-        <textarea class="sb-textbox" id="sb-textbox" placeholder="Click a phonetic above…" readonly rows="2"></textarea>
-        <button class="btn btn--primary sb-reveal-btn" id="sb-reveal">Reveal</button>
+        <textarea class="sb-textbox" id="sb-textbox" placeholder="Tap a word on the wheel…" readonly rows="2"></textarea>
+        <button class="btn sb-reveal-btn" id="sb-reveal-btn">Reveal</button>
       </div>
 
       <div class="sb-result" id="sb-result" hidden>
@@ -1472,36 +1474,60 @@ function startSentenceBuilder() {
           <button class="btn sb-right-btn" id="sb-right">I'm Right</button>
           <button class="btn sb-wrong-btn" id="sb-wrong">I'm Wrong</button>
         </div>
-        <button class="btn btn--primary sb-next-btn" id="sb-next" disabled>Next</button>
+        <button class="btn sb-next-btn" id="sb-next" disabled>Next</button>
       </div>
     </div>`;
 
-  $('#sb-close').onclick = closeGame;
+  const wheel = $('#sb-wheel');
 
-  $('#sb-wheel').addEventListener('click', e => {
+  // Index-based scroll: item[i] centers at scrollTop = i × ITEM_H
+  function scrollToIdx(i, smooth) {
+    wheel.scrollTo({ top: i * ITEM_H, behavior: smooth ? 'smooth' : 'instant' });
+  }
+
+  function centerIdx() {
+    return Math.round(wheel.scrollTop / ITEM_H);
+  }
+
+  function updateHighlight() {
+    const ci = centerIdx();
+    wheel.querySelectorAll('.sb-wheel-item').forEach((el, i) => {
+      el.classList.toggle('is-center', i === ci);
+    });
+  }
+
+  wheel.addEventListener('scroll', updateHighlight, { passive: true });
+  // Start at first item
+  scrollToIdx(0, false);
+  requestAnimationFrame(updateHighlight);
+
+  wheel.addEventListener('click', e => {
     const item = e.target.closest('.sb-wheel-item');
     if (!item) return;
-    const wheel = $('#sb-wheel');
-    const targetScroll = item.offsetTop - PAD;
-    wheel.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    const items = Array.from(wheel.querySelectorAll('.sb-wheel-item'));
+    const idx = items.indexOf(item);
+    scrollToIdx(idx, true);
     $('#sb-textbox').value = item.textContent.trim();
     currentPhrase = phrases.find(p => p.id === item.dataset.id) || null;
+    items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
   });
 
-  $('#sb-reveal').onclick = () => {
+  $('#sb-close').onclick = closeGame;
+
+  $('#sb-reveal-btn').onclick = () => {
     const phonetic = $('#sb-textbox').value.trim();
-    if (!phonetic) { toast('Tap a phonetic on the wheel first'); return; }
+    if (!phonetic) { toast('Tap a word on the wheel first'); return; }
 
     const match = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase());
     currentPhrase = match || null;
     judged = false;
 
     $('#sb-r-phonetic').textContent = phonetic;
-    $('#sb-r-english').textContent = match ? match.input : '—';
+    $('#sb-r-english').textContent  = match ? match.input       : '—';
     $('#sb-r-translation').textContent = match ? match.translation : '—';
     $('#sb-next').disabled = true;
-    $('#sb-right').classList.remove('sb-judged');
-    $('#sb-wrong').classList.remove('sb-judged');
+    $('#sb-right').classList.remove('sb-judged--right');
+    $('#sb-wrong').classList.remove('sb-judged--wrong');
 
     const build = $('#sb-build');
     build.classList.add('sb-build--exit');
@@ -1509,8 +1535,8 @@ function startSentenceBuilder() {
       build.hidden = true;
       const result = $('#sb-result');
       result.hidden = false;
-      result.classList.add('sb-result--enter');
-    }, 280);
+      requestAnimationFrame(() => requestAnimationFrame(() => result.classList.add('sb-result--enter')));
+    }, 260);
   };
 
   function judge(correct) {
@@ -1518,7 +1544,7 @@ function startSentenceBuilder() {
     judged = true;
     if (currentPhrase) applyMastery(currentPhrase.id, correct ? 1 : -1);
     if (correct) score.right++; else score.wrong++;
-    $('#sb-score').textContent = scoreLabel();
+    $('#sb-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
     $('#sb-next').disabled = false;
     $('#sb-right').classList.toggle('sb-judged--right', correct);
     $('#sb-wrong').classList.toggle('sb-judged--wrong', !correct);
@@ -1531,11 +1557,14 @@ function startSentenceBuilder() {
     currentPhrase = null;
     judged = false;
     $('#sb-textbox').value = '';
-    $('#sb-result').hidden = true;
-    $('#sb-result').classList.remove('sb-result--enter');
+    const result = $('#sb-result');
+    result.hidden = true;
+    result.classList.remove('sb-result--enter');
     const build = $('#sb-build');
     build.classList.remove('sb-build--exit');
     build.hidden = false;
+    scrollToIdx(0, false);
+    requestAnimationFrame(updateHighlight);
   };
 }
 
