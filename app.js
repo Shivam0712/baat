@@ -238,6 +238,7 @@ function switchView(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('is-active', t.dataset.target === name));
   if (name === 'browse' && !currentBrowseId) doShuffle();
   if (name === 'library') renderLibrary();
+  if (name === 'progress') renderProgress();
 }
 
 $('#tabbar').addEventListener('click', e => {
@@ -1177,7 +1178,95 @@ function showResult() {
 }
 
 /* =========================================================
-   19. HELPERS
+   19. PROGRESS VIEW
+   ========================================================= */
+function renderProgress() {
+  const el = $('#progress-view');
+  const total = state.phrases.length;
+
+  if (!total) {
+    el.innerHTML = `<div class="prog-empty"><p>No phrases yet.<br>Add some in the Library.</p></div>`;
+    return;
+  }
+
+  const coldList = state.phrases.filter(p => band(p.mastery) === 'cold');
+  const warmList = state.phrases.filter(p => band(p.mastery) === 'warm');
+  const hotList  = state.phrases.filter(p => band(p.mastery) === 'hot');
+
+  const nCold = coldList.length, nWarm = warmList.length, nHot = hotList.length;
+  const avgMastery = state.phrases.reduce((s, p) => s + p.mastery, 0) / total;
+  const overallPct = Math.round(avgMastery);
+
+  // SVG donut
+  const R = 80, SW = 26, CX = 100, CY = 100;
+  const C = 2 * Math.PI * R;
+  const GAP = total > 1 ? 3 : 0;
+
+  function seg(count, color, offset) {
+    if (count === 0) return '';
+    const arc = Math.max(0, (count / total) * C - GAP);
+    return `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
+      stroke="${color}" stroke-width="${SW}" stroke-linecap="round"
+      stroke-dasharray="${arc} ${C}"
+      stroke-dashoffset="${C - offset}"
+      transform="rotate(-90 ${CX} ${CY})"/>`;
+  }
+
+  const coldArc = (nCold / total) * C;
+  const warmArc = (nWarm / total) * C;
+
+  const svgSegs = seg(nCold, 'var(--cold)', 0)
+    + seg(nWarm, 'var(--warm)', coldArc)
+    + seg(nHot,  'var(--hot)',  coldArc + warmArc);
+
+  el.innerHTML = `
+    <div class="prog-chart-wrap">
+      <svg class="prog-donut" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--hair)" stroke-width="${SW}"/>
+        ${svgSegs}
+        <text x="${CX}" y="${CY - 10}" class="prog-center-pct" text-anchor="middle" dominant-baseline="middle">${overallPct}%</text>
+        <text x="${CX}" y="${CY + 16}" class="prog-center-label" text-anchor="middle" dominant-baseline="middle">mastery</text>
+      </svg>
+    </div>
+
+    <div class="prog-legend">
+      <div class="prog-legend-item">
+        <span class="prog-legend-dot" style="background:var(--cold)"></span>
+        <div class="prog-legend-text">
+          <span class="prog-legend-name">Cold</span>
+          <span class="prog-legend-count">${nCold} <span class="prog-legend-pct">${Math.round(nCold/total*100)}%</span></span>
+        </div>
+      </div>
+      <div class="prog-legend-item">
+        <span class="prog-legend-dot" style="background:var(--warm)"></span>
+        <div class="prog-legend-text">
+          <span class="prog-legend-name">Warm</span>
+          <span class="prog-legend-count">${nWarm} <span class="prog-legend-pct">${Math.round(nWarm/total*100)}%</span></span>
+        </div>
+      </div>
+      <div class="prog-legend-item">
+        <span class="prog-legend-dot" style="background:var(--hot)"></span>
+        <div class="prog-legend-text">
+          <span class="prog-legend-name">Hot</span>
+          <span class="prog-legend-count">${nHot} <span class="prog-legend-pct">${Math.round(nHot/total*100)}%</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="prog-bar-section">
+      <div class="prog-bar-header">
+        <span class="prog-bar-label">Overall Mastery</span>
+        <span class="prog-bar-value">${overallPct} / 100</span>
+      </div>
+      <div class="prog-bar-track">
+        <div class="prog-bar-fill" style="width:${overallPct}%"></div>
+      </div>
+      <p class="prog-bar-hint">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>
+    </div>`;
+}
+
+/* =========================================================
+   20. HELPERS
    ========================================================= */
 function getDistractorPhrases(entry, count) {
   let pool = state.phrases.filter(p => p.id !== entry.id && p.phonetics && p.phonetics !== entry.phonetics);

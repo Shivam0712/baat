@@ -1474,6 +1474,154 @@ button {
 }
 
 /* =========================================================
+   PROGRESS VIEW
+   ========================================================= */
+.progress-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 22px 28px;
+  overflow-y: auto;
+  gap: 28px;
+}
+
+.prog-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.prog-chart-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 0;
+}
+
+.prog-donut {
+  width: min(260px, 72vw);
+  height: min(260px, 72vw);
+  filter: drop-shadow(0 4px 24px rgba(0,0,0,.12));
+}
+
+.prog-center-pct {
+  font-size: 36px;
+  font-weight: 800;
+  fill: var(--text-1);
+}
+
+.prog-center-label {
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.prog-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+}
+
+.prog-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.prog-legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.prog-legend-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prog-legend-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.prog-legend-count {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.prog-legend-pct {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: 4px;
+}
+
+.prog-bar-section {
+  background: var(--bg-elev);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+}
+
+.prog-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.prog-bar-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.prog-bar-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.prog-bar-track {
+  width: 100%;
+  height: 14px;
+  background: var(--hair);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.prog-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--cold) 0%, var(--warm) 55%, var(--hot) 100%);
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+  min-width: 4px;
+}
+
+.prog-bar-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* =========================================================
    MASTER 10 WORD PICKER
    ========================================================= */
 .m10-body {
