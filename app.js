@@ -504,7 +504,74 @@ function closeGame() {
   gameSession = null;
 }
 
+function startMaster10() {
+  const gameEl = $('#game');
+  gameEl.hidden = false;
+  const selected = new Set();
+  const phrases = state.phrases.slice().sort((a, b) => a.input.localeCompare(b.input));
+
+  gameEl.innerHTML = `
+    <div class="game__bar">
+      <button class="game__close" id="game-close-setup" aria-label="Close">✕</button>
+      <span class="game__score" id="m10-count">0 selected</span>
+    </div>
+    <div class="game__body m10-body">
+      <h2 class="m10-heading">Master 10</h2>
+      <p class="m10-sub-heading">Pick phrases to master, or go random.</p>
+      <button class="btn btn--ghost m10-random-btn" id="m10-random">🎲 Pick ${Math.min(10, phrases.length)} randomly</button>
+      <div class="m10-list" id="m10-list">
+        ${phrases.map(p => {
+          const b = band(p.mastery);
+          return `<div class="m10-item" data-id="${p.id}">
+            <span class="m10-check"></span>
+            <span class="m10-text">
+              <span class="m10-phrase">${esc(p.input)}</span>
+              <span class="m10-tier">${b} · ${Math.round(p.mastery)}%</span>
+            </span>
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn--primary" id="m10-start" disabled>Start</button>
+    </div>`;
+
+  function updateUI() {
+    $('#m10-count').textContent = `${selected.size} selected`;
+    const btn = $('#m10-start');
+    btn.textContent = selected.size >= CONFIG.GAME_MIN_PHRASES ? `Start with ${selected.size}` : `Select at least ${CONFIG.GAME_MIN_PHRASES}`;
+    btn.disabled = selected.size < CONFIG.GAME_MIN_PHRASES;
+  }
+
+  $('#game-close-setup').onclick = closeGame;
+
+  $('#m10-random').onclick = () => {
+    selected.clear();
+    shuffle(phrases.slice()).slice(0, Math.min(10, phrases.length)).forEach(p => selected.add(p.id));
+    document.querySelectorAll('.m10-item').forEach(el => {
+      const on = selected.has(el.dataset.id);
+      el.classList.toggle('is-selected', on);
+      el.querySelector('.m10-check').textContent = on ? '✓' : '';
+    });
+    updateUI();
+  };
+
+  $('#m10-list').addEventListener('click', e => {
+    const item = e.target.closest('.m10-item');
+    if (!item) return;
+    const id = item.dataset.id;
+    if (selected.has(id)) { selected.delete(id); item.classList.remove('is-selected'); item.querySelector('.m10-check').textContent = ''; }
+    else { selected.add(id); item.classList.add('is-selected'); item.querySelector('.m10-check').textContent = '✓'; }
+    updateUI();
+  });
+
+  $('#m10-start').onclick = () => {
+    const entries = phrases.filter(p => selected.has(p.id));
+    gameSession = { type: 'master10', entries, index: 0, score: 0, answered: 0, gameTypes: ['match', 'choice', 'listen', 'listenfill', 'flip'], gameTypeIndex: 0 };
+    renderGame();
+  };
+}
+
 function startGame(type) {
+  if (type === 'master10') { startMaster10(); return; }
   const maxBatch = state.phrases.length;
   const defaultBatch = Math.min(10, maxBatch);
 
@@ -544,20 +611,13 @@ function startGame(type) {
 
   $('#game-start').onclick = () => {
     const entries = weightedSample(state.phrases, batchSize);
-    gameSession = {
-      type,
-      entries,
-      index: 0,
-      score: 0,
-      answered: 0,
-      ...(type === 'master10' ? { gameTypes: ['match', 'choice', 'listen', 'revfill', 'flip'], gameTypeIndex: 0 } : {}),
-    };
+    gameSession = { type, entries, index: 0, score: 0, answered: 0 };
     renderGame();
   };
 }
 
 function gameTitle(type) {
-  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', revfill: 'Rev Fill', master10: 'Master Mode' }[type] || type;
+  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', listenfill: 'Listen & Fill', master10: 'Master 10' }[type] || type;
 }
 
 function gameDesc(type) {
@@ -566,8 +626,8 @@ function gameDesc(type) {
     choice: 'Pick the correct phonetic spelling.',
     listen: 'Hear the phrase and identify it.',
     flip: 'Flip the card and rate yourself.',
-    revfill: 'Hear the phrase and type it out.',
-    master10: 'Play all 5 games with the same set of phrases.',
+    listenfill: 'Hear the phrase and type it out.',
+    master10: 'Choose your phrases, then play all 5 games.',
   }[type] || '';
 }
 
@@ -614,7 +674,7 @@ function renderGame() {
     else if (subType === 'listen') renderListen(body, entry);
     else if (subType === 'match') renderMatch(body);
     else if (subType === 'flip') renderFlip(body, entry);
-    else if (subType === 'revfill') renderRevFill(body, entry);
+    else if (subType === 'listenfill') renderListenFill(body, entry);
     return;
   }
 
@@ -642,7 +702,7 @@ function renderGame() {
   else if (gs.type === 'listen') renderListen(body, entry);
   else if (gs.type === 'match') renderMatch(body);
   else if (gs.type === 'flip') renderFlip(body, entry);
-  else if (gs.type === 'revfill') renderRevFill(body, entry);
+  else if (gs.type === 'listenfill') renderListenFill(body, entry);
 }
 
 function updateScore() {
@@ -916,34 +976,34 @@ function renderFlip(body, entry) {
   };
 }
 
-/* --- GAME E: Rev Fill --- */
-function renderRevFill(body, entry) {
+/* --- GAME E: Listen & Fill --- */
+function renderListenFill(body, entry) {
   body.innerHTML = `
     <div class="game__prompt-label">Type the phrase you hear</div>
     <div class="listen-replay">
-      <button class="btn-play" id="revfill-play" aria-label="Play">▶</button>
+      <button class="btn-play" id="listenfill-play" aria-label="Play">▶</button>
       <span class="listen-phon">${esc(entry.phonetics)}</span>
     </div>
-    <div class="revfill-wrap">
-      <input type="text" id="revfill-input" class="revfill-input" placeholder="Type here…" autocomplete="off" autocorrect="off" spellcheck="false">
-      <button class="btn btn--primary" id="revfill-submit">Check</button>
-      <div id="revfill-feedback" class="revfill-feedback" hidden></div>
+    <div class="listenfill-wrap">
+      <input type="text" id="listenfill-input" class="listenfill-input" placeholder="Type here…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn btn--primary" id="listenfill-submit">Check</button>
+      <div id="listenfill-feedback" class="listenfill-feedback" hidden></div>
     </div>`;
 
-  const playBtn = $('#revfill-play');
+  const playBtn = $('#listenfill-play');
   playBtn.onclick = () => speak(entry.translation, playBtn);
   speak(entry.translation, playBtn);
 
   function check() {
-    const val = $('#revfill-input').value.trim().toLowerCase();
+    const val = $('#listenfill-input').value.trim().toLowerCase();
     if (!val) return;
     const correct = val === entry.input.trim().toLowerCase();
-    const fb = $('#revfill-feedback');
+    const fb = $('#listenfill-feedback');
     fb.hidden = false;
     fb.textContent = correct ? '✓ Correct!' : `✗ Answer: ${entry.input}`;
-    fb.className = `revfill-feedback ${correct ? 'revfill-feedback--correct' : 'revfill-feedback--wrong'}`;
-    $('#revfill-input').disabled = true;
-    $('#revfill-submit').disabled = true;
+    fb.className = `listenfill-feedback ${correct ? 'listenfill-feedback--correct' : 'listenfill-feedback--wrong'}`;
+    $('#listenfill-input').disabled = true;
+    $('#listenfill-submit').disabled = true;
     applyMastery(entry.id, correct ? CONFIG.DELTA_CORRECT : CONFIG.DELTA_WRONG);
     entry.gamesSeen++;
     if (correct) { entry.gamesCorrect++; gameSession.score++; }
@@ -953,9 +1013,9 @@ function renderRevFill(body, entry) {
     advanceGame();
   }
 
-  $('#revfill-submit').onclick = check;
-  $('#revfill-input').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-  setTimeout(() => $('#revfill-input').focus(), 100);
+  $('#listenfill-submit').onclick = check;
+  $('#listenfill-input').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+  setTimeout(() => $('#listenfill-input').focus(), 100);
 }
 
 /* --- RESULT SCREEN --- */
