@@ -666,7 +666,21 @@ function startMaster10() {
 
   $('#m10-random').onclick = () => {
     selected.clear();
-    shuffle(phrases.slice()).slice(0, Math.min(10, phrases.length)).forEach(p => selected.add(p.id));
+    const cold = phrases.filter(p => band(p.mastery) === 'cold').sort((a, b) => a.mastery - b.mastery);
+    const warm = shuffle(phrases.filter(p => band(p.mastery) === 'warm'));
+    const hot  = shuffle(phrases.filter(p => band(p.mastery) === 'hot'));
+    const pick = (pool, n) => pool.slice(0, n);
+    const picks = [];
+    const hotPicks  = pick(hot,  2);
+    const warmPicks = pick(warm, 3);
+    const coldPicks = pick(cold, 5 + (2 - hotPicks.length) + (3 - warmPicks.length));
+    picks.push(...hotPicks, ...warmPicks, ...coldPicks);
+    // if still under 10 (not enough phrases total), just fill from remaining
+    if (picks.length < Math.min(10, phrases.length)) {
+      const used = new Set(picks.map(p => p.id));
+      phrases.filter(p => !used.has(p.id)).slice(0, Math.min(10, phrases.length) - picks.length).forEach(p => picks.push(p));
+    }
+    picks.forEach(p => selected.add(p.id));
     document.querySelectorAll('.m10-item').forEach(el => {
       const on = selected.has(el.dataset.id);
       el.classList.toggle('is-selected', on);
