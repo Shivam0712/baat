@@ -218,7 +218,6 @@ button {
   background: var(--bg-elev);
   border-radius: var(--r-lg);
   padding: 38px 30px 34px;
-  box-shadow: var(--shadow-card);
   border: 1px solid var(--hair);
   overflow: hidden;
   position: relative;
