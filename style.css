@@ -1286,41 +1286,60 @@ button {
   letter-spacing: .02em;
 }
 
-.revfill-wrap {
+.listenfill-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
-  max-width: 380px;
-  margin: 0 auto;
+  flex: 1;
 }
 
-.revfill-input {
+.listenfill-input {
   width: 100%;
-  height: 72px;
-  padding: 0 20px;
+  flex: 1;
+  min-height: 80px;
+  max-height: 140px;
+  padding: 18px 20px;
   border-radius: var(--r-md);
   border: 2px solid var(--hair);
   background: var(--bg-elev);
   color: var(--text-1);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 500;
   box-sizing: border-box;
   -webkit-appearance: none;
   appearance: none;
+  resize: none;
 }
 
-.revfill-input:focus { outline: none; border-color: var(--accent); }
+.listenfill-input:focus { outline: none; border-color: var(--accent); }
 
-.revfill-feedback {
-  margin-top: 10px;
-  font-size: 16px;
-  font-weight: 600;
+.listenfill-submit {
+  width: 100%;
+  height: 56px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.listenfill-submit:active { opacity: .85; }
+.listenfill-submit:disabled { opacity: .45; cursor: default; }
+
+.listenfill-feedback {
+  font-size: 18px;
+  font-weight: 700;
   text-align: center;
+  padding: 10px 0;
+  flex-shrink: 0;
 }
 
-.revfill-feedback--correct { color: var(--warm); }
-.revfill-feedback--wrong   { color: var(--hot); }
+.listenfill-feedback--correct { color: var(--warm); }
+.listenfill-feedback--wrong   { color: var(--hot); }
 
 .game-transition {
   display: flex;

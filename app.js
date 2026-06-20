@@ -985,8 +985,8 @@ function renderListenFill(body, entry) {
       <span class="listen-phon">${esc(entry.phonetics)}</span>
     </div>
     <div class="listenfill-wrap">
-      <input type="text" id="listenfill-input" class="listenfill-input" placeholder="Type here…" autocomplete="off" autocorrect="off" spellcheck="false">
-      <button class="btn btn--primary" id="listenfill-submit">Check</button>
+      <textarea id="listenfill-input" class="listenfill-input" placeholder="Type here…" autocomplete="off" autocorrect="off" spellcheck="false" rows="2"></textarea>
+      <button class="listenfill-submit" id="listenfill-submit">Check</button>
       <div id="listenfill-feedback" class="listenfill-feedback" hidden></div>
     </div>`;
 
