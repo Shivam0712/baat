@@ -1571,54 +1571,11 @@ button {
   margin-left: 4px;
 }
 
-.prog-bar-section {
-  background: var(--bg-elev);
-  border: 1px solid var(--hair);
-  border-radius: var(--r-lg);
-  padding: 18px 20px;
-}
-
-.prog-bar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 12px;
-}
-
-.prog-bar-label {
+.prog-summary {
+  text-align: center;
   font-size: 14px;
-  font-weight: 700;
-  color: var(--text-1);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.prog-bar-value {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.prog-bar-track {
-  width: 100%;
-  height: 14px;
-  background: var(--hair);
-  border-radius: 99px;
-  overflow: hidden;
-}
-
-.prog-bar-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--cold) 0%, var(--warm) 55%, var(--hot) 100%);
-  transition: width .6s cubic-bezier(.4,0,.2,1);
-  min-width: 4px;
-}
-
-.prog-bar-hint {
-  margin: 10px 0 0;
-  font-size: 13px;
   color: var(--text-3);
+  margin: -8px 0 0;
 }
 
 /* =========================================================

@@ -1202,13 +1202,13 @@ function renderProgress() {
   const C = 2 * Math.PI * R;
   const GAP = total > 1 ? 3 : 0;
 
-  function seg(count, color, offset) {
+  function seg(count, color, cumOffset) {
     if (count === 0) return '';
     const arc = Math.max(0, (count / total) * C - GAP);
     return `<circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
-      stroke="${color}" stroke-width="${SW}" stroke-linecap="round"
+      stroke="${color}" stroke-width="${SW}"
       stroke-dasharray="${arc} ${C}"
-      stroke-dashoffset="${C - offset}"
+      stroke-dashoffset="${-cumOffset}"
       transform="rotate(-90 ${CX} ${CY})"/>`;
   }
 
@@ -1252,17 +1252,7 @@ function renderProgress() {
         </div>
       </div>
     </div>
-
-    <div class="prog-bar-section">
-      <div class="prog-bar-header">
-        <span class="prog-bar-label">Overall Mastery</span>
-        <span class="prog-bar-value">${overallPct} / 100</span>
-      </div>
-      <div class="prog-bar-track">
-        <div class="prog-bar-fill" style="width:${overallPct}%"></div>
-      </div>
-      <p class="prog-bar-hint">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>
-    </div>`;
+    <p class="prog-summary">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>`;
 }
 
 /* =========================================================
