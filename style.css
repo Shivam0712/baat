@@ -2119,6 +2119,25 @@ button {
    ========================================================= */
 .wish-item { cursor: default; }
 
+.list__pin {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.list__pin.is-pinned { color: var(--accent); }
+.list__pin:active { background: var(--bg-sunken); }
+
+.m10-pin-dot { font-size: 12px; }
+
 .wish-del {
   flex-shrink: 0;
   width: 28px;

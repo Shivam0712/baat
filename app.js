@@ -385,6 +385,9 @@ function renderLibrary() {
         <span class="list__phrase">${esc(p.input)}</span>
         <span class="list__sub">${b} · ${Math.round(p.mastery)}%</span>
       </span>
+      <button class="list__pin${p.pinned ? ' is-pinned' : ''}" data-id="${p.id}" aria-label="${p.pinned ? 'Unpin' : 'Pin'}">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="${p.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </button>
       <span class="list__chev">›</span>
     </li>`;
   }).join('');
@@ -423,6 +426,12 @@ $('#lib-sort').addEventListener('change', e => {
 $('#list').addEventListener('click', e => {
   const playBtn = e.target.closest('.list__play');
   if (playBtn) { speak(playBtn.dataset.phrase, playBtn); return; }
+  const pinBtn = e.target.closest('.list__pin');
+  if (pinBtn) {
+    const p = state.phrases.find(x => x.id === pinBtn.dataset.id);
+    if (p) { p.pinned = !p.pinned; save(); renderLibrary(); }
+    return;
+  }
   const li = e.target.closest('.list__item');
   if (li) openEditor(li.dataset.id);
 });
@@ -724,7 +733,11 @@ function startMaster10() {
   const gameEl = $('#game');
   gameEl.hidden = false;
   const selected = new Set();
-  const phrases = state.phrases.slice().sort((a, b) => a.input.localeCompare(b.input));
+  const phrases = state.phrases.slice().sort((a, b) => {
+    if (b.pinned && !a.pinned) return 1;
+    if (a.pinned && !b.pinned) return -1;
+    return a.input.localeCompare(b.input);
+  });
 
   gameEl.innerHTML = `
     <div class="game__bar">
@@ -741,7 +754,7 @@ function startMaster10() {
           return `<div class="m10-item" data-id="${p.id}">
             <span class="m10-check"></span>
             <span class="m10-text">
-              <span class="m10-phrase">${esc(p.input)}</span>
+              <span class="m10-phrase">${esc(p.input)}${p.pinned ? ' <span class="m10-pin-dot">📍</span>' : ''}</span>
               <span class="m10-tier">${b} · ${Math.round(p.mastery)}%</span>
             </span>
           </div>`;
