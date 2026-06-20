@@ -1511,7 +1511,7 @@ button {
 .prog-center-pct {
   font-size: 36px;
   font-weight: 800;
-  fill: var(--text-1);
+  fill: var(--text);
 }
 
 .prog-center-label {
