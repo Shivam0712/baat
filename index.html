@@ -136,22 +136,35 @@
   <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
     <div class="sheet__grip"></div>
     <h2 class="sheet__title" id="editor-title">Add phrase</h2>
-    <label class="field">
-      <span class="field__label">Phrase</span>
-      <textarea id="f-input" rows="2" placeholder="e.g. Hello"></textarea>
-    </label>
-    <label class="field">
-      <span class="field__label">Translation</span>
-      <textarea id="f-translation" rows="2" placeholder="e.g. สวัสดี"></textarea>
-    </label>
-    <label class="field">
-      <span class="field__label">Phonetics</span>
-      <textarea id="f-phonetics" rows="2" placeholder="e.g. sa-wat-dee"></textarea>
-    </label>
-    <label class="field">
-      <span class="field__label">Note</span>
-      <textarea id="f-note" rows="2" placeholder="e.g. Used when greeting someone formally"></textarea>
-    </label>
+    <div class="editor-tabs" id="editor-tabs">
+      <button class="editor-tab is-active" id="tab-manual" type="button">Manual</button>
+      <button class="editor-tab" id="tab-paste" type="button">Paste</button>
+    </div>
+    <div id="editor-manual">
+      <label class="field">
+        <span class="field__label">Phrase</span>
+        <textarea id="f-input" rows="2" placeholder="e.g. Hello"></textarea>
+      </label>
+      <label class="field">
+        <span class="field__label">Translation</span>
+        <textarea id="f-translation" rows="2" placeholder="e.g. สวัสดี"></textarea>
+      </label>
+      <label class="field">
+        <span class="field__label">Phonetics</span>
+        <textarea id="f-phonetics" rows="2" placeholder="e.g. sa-wat-dee"></textarea>
+      </label>
+      <label class="field">
+        <span class="field__label">Note</span>
+        <textarea id="f-note" rows="2" placeholder="e.g. Used when greeting someone formally"></textarea>
+      </label>
+    </div>
+    <div id="editor-paste" hidden>
+      <label class="field">
+        <span class="field__label">Paste one or more entries</span>
+        <textarea id="f-paste" rows="10" placeholder="English: Hello&#10;Translation: สวัสดี&#10;Phonetics: sa-wat-dee&#10;Note: Informal greeting&#10;Mastery: 0&#10;&#10;English: Thank you&#10;Translation: ขอบคุณ&#10;Phonetics: khop-khun&#10;Note: Add polite particle at the end"></textarea>
+      </label>
+      <p class="paste-hint">Separate multiple entries with a blank line. Mastery is optional (0–100).</p>
+    </div>
     <div class="sheet__row">
       <button class="btn btn--ghost" id="btn-cancel">Cancel</button>
       <button class="btn btn--primary" id="btn-save">Save</button>
@@ -172,8 +185,11 @@
     </label>
     <p class="set-note" id="lang-note" hidden>No voice for this language on this device — playback may sound off.</p>
     <div class="sheet__row">
-      <button class="btn btn--ghost" id="btn-export">Export backup</button>
-      <button class="btn btn--ghost" id="btn-import-trigger">Import backup</button>
+      <button class="btn btn--ghost" id="btn-export">Export JSON</button>
+      <button class="btn btn--ghost" id="btn-import-trigger">Import JSON</button>
+    </div>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-export-txt">Export .txt</button>
     </div>
     <input type="file" id="import-file" accept="application/json,.json" hidden>
     <p class="set-stat" id="set-stat"></p>

@@ -75,7 +75,35 @@ function newPhrase(input, translation, phonetics, note) {
 }
 
 function addPhrase(i, t, p, n) { state.phrases.push(newPhrase(i, t, p, n)); save(); }
-function bulkAdd(arr) { arr.forEach(o => state.phrases.push(newPhrase(o.input, o.translation, o.phonetics, o.note))); save(); }
+function bulkAdd(arr) {
+  arr.forEach(o => {
+    const p = newPhrase(o.input, o.translation, o.phonetics, o.note);
+    if (o.mastery !== undefined && o.mastery !== '') p.mastery = clampM(Number(o.mastery) || 0);
+    state.phrases.push(p);
+  });
+  save();
+}
+
+function parseBlocks(text) {
+  const blocks = text.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/);
+  const valid = [], skipped = [];
+  for (const blk of blocks) {
+    const lines = blk.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (!lines.length) continue;
+    const fields = {};
+    for (const line of lines) {
+      const m = line.match(/^([^:]+):\s*(.*)/);
+      if (m) fields[m[1].trim().toLowerCase()] = m[2].trim();
+    }
+    const translation = fields.translation || fields.thai;
+    if (fields.english && translation && fields.phonetics) {
+      valid.push({ input: fields.english, translation, phonetics: fields.phonetics, note: fields.note || '', mastery: fields.mastery });
+    } else {
+      skipped.push(blk);
+    }
+  }
+  return { valid, skipped };
+}
 function updatePhrase(id, patch) { const e = state.phrases.find(x => x.id === id); if (e) { Object.assign(e, patch); save(); } }
 function removePhrase(id) { state.phrases = state.phrases.filter(x => x.id !== id); save(); }
 
@@ -338,8 +366,11 @@ $('#list').addEventListener('click', e => {
    ========================================================= */
 let editingId = null;
 
+let editorPasteMode = false;
+
 function openEditor(id) {
   editingId = id || null;
+  editorPasteMode = false;
   const e = id ? state.phrases.find(x => x.id === id) : null;
   $('#editor-title').textContent = id ? 'Edit phrase' : 'Add phrase';
   $('#f-input').value = e ? e.input : '';
@@ -347,16 +378,53 @@ function openEditor(id) {
   $('#f-phonetics').value = e ? e.phonetics : '';
   $('#f-note').value = e ? (e.note || '') : '';
   $('#btn-delete').hidden = !id;
+  // Tabs only visible when adding (not editing)
+  $('#editor-tabs').hidden = !!id;
+  $('#editor-manual').hidden = false;
+  $('#editor-paste').hidden = true;
+  $('#tab-manual').classList.add('is-active');
+  $('#tab-paste').classList.remove('is-active');
+  $('#btn-save').textContent = 'Save';
   $('#editor').hidden = false;
 }
 
-function closeEditor() { $('#editor').hidden = true; editingId = null; }
+function closeEditor() { $('#editor').hidden = true; editingId = null; editorPasteMode = false; }
+
+$('#tab-manual').onclick = () => {
+  editorPasteMode = false;
+  $('#editor-manual').hidden = false;
+  $('#editor-paste').hidden = true;
+  $('#tab-manual').classList.add('is-active');
+  $('#tab-paste').classList.remove('is-active');
+  $('#btn-save').textContent = 'Save';
+};
+
+$('#tab-paste').onclick = () => {
+  editorPasteMode = true;
+  $('#editor-manual').hidden = true;
+  $('#editor-paste').hidden = false;
+  $('#tab-paste').classList.add('is-active');
+  $('#tab-manual').classList.remove('is-active');
+  $('#f-paste').value = '';
+  $('#btn-save').textContent = 'Import';
+};
 
 $('#btn-add').onclick = () => openEditor(null);
 $('#btn-cancel').onclick = closeEditor;
 $('#editor .sheet__backdrop').onclick = closeEditor;
 
 $('#btn-save').onclick = () => {
+  if (editorPasteMode) {
+    const text = $('#f-paste').value.trim();
+    if (!text) { toast('Nothing to import.'); return; }
+    const { valid, skipped } = parseBlocks(text);
+    if (!valid.length) { toast('No valid entries found. Check format.'); return; }
+    bulkAdd(valid);
+    closeEditor();
+    renderLibrary();
+    toast(`Added ${valid.length}` + (skipped.length ? ` · skipped ${skipped.length}` : ''));
+    return;
+  }
   const i = $('#f-input').value.trim();
   const t = $('#f-translation').value.trim();
   const p = $('#f-phonetics').value.trim();
@@ -391,29 +459,10 @@ $('#btn-delete').onclick = () => {
 $('#file-upload').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
-  const blocks = text.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n+/);
-  let added = 0, skipped = 0;
-  const valid = [];
-  for (const blk of blocks) {
-    const lines = blk.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length === 0) continue;
-    const fields = {};
-    for (const line of lines) {
-      const m = line.match(/^([^:]+):\s*(.*)/);
-      if (m) fields[m[1].trim().toLowerCase()] = m[2].trim();
-    }
-    const translation = fields.translation || fields.thai;
-    if (fields.english && translation && fields.phonetics) {
-      valid.push({ input: fields.english, translation, phonetics: fields.phonetics, note: fields.note || '' });
-      added++;
-    } else {
-      skipped++;
-    }
-  }
+  const { valid, skipped } = parseBlocks(await file.text());
   if (valid.length) bulkAdd(valid);
   renderLibrary();
-  toast(`Added ${added}` + (skipped ? ` · skipped ${skipped} (bad format)` : ''));
+  toast(`Added ${valid.length}` + (skipped.length ? ` · skipped ${skipped.length} (bad format)` : ''));
   e.target.value = '';
 });
 
@@ -455,6 +504,21 @@ $('#btn-export').onclick = () => {
   a.click();
   URL.revokeObjectURL(url);
   toast('Backup downloaded.');
+};
+
+$('#btn-export-txt').onclick = () => {
+  const txt = state.phrases.map(p =>
+    `English: ${p.input}\nTranslation: ${p.translation}\nPhonetics: ${p.phonetics || ''}\nNote: ${p.note || ''}\nMastery: ${Math.round(p.mastery)}`
+  ).join('\n\n');
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  a.href = url;
+  a.download = `baat-phrases-${d}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported .txt');
 };
 
 $('#btn-import-trigger').onclick = () => $('#import-file').click();
