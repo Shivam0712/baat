@@ -504,6 +504,63 @@ function closeGame() {
   gameSession = null;
 }
 
+function renderMaster10Preview() {
+  const gs = gameSession;
+  const gameEl = $('#game');
+
+  if (gs.index >= gs.entries.length) {
+    gs.phase = 'games';
+    gs.index = 0;
+    const firstType = gs.gameTypes[0];
+    gameEl.innerHTML = `
+      <div class="game__bar">
+        <button class="game__close" id="game-close-mid" aria-label="Close">✕</button>
+        <span class="game__score"></span>
+      </div>
+      <div class="game__body">
+        <div class="game-transition">
+          <div class="game-transition__badge">Game 1 of ${gs.gameTypes.length}</div>
+          <h2>Ready to play!</h2>
+          <p class="game-transition__name">${gameTitle(firstType)}</p>
+          <p>${gameDesc(firstType)}</p>
+          <button class="btn btn--primary" id="transition-go" style="width:100%;max-width:280px">Let's go →</button>
+        </div>
+      </div>`;
+    $('#game-close-mid').onclick = () => confirmDialog('End session?', 'Your progress so far is saved.', closeGame);
+    $('#transition-go').onclick = () => renderGame();
+    return;
+  }
+
+  const entry = gs.entries[gs.index];
+  const total = gs.entries.length;
+  const current = gs.index + 1;
+
+  gameEl.innerHTML = `
+    <div class="game__bar">
+      <button class="game__close" id="game-close-preview" aria-label="Close">✕</button>
+      <span class="game__score">${current} / ${total}</span>
+    </div>
+    <div class="game__body m10-preview-body">
+      <div class="m10-preview-card">
+        <div class="m10-preview__label">Review</div>
+        <div class="m10-preview__phrase">${esc(entry.input)}</div>
+        <div class="m10-preview__translation">${esc(entry.translation)}</div>
+        <div class="m10-preview__phon">${esc(entry.phonetics)}</div>
+        ${entry.note ? `<div class="m10-preview__note">${esc(entry.note)}</div>` : ''}
+        <button class="btn-play m10-preview__play" id="preview-play" aria-label="Play">▶</button>
+      </div>
+      <button class="btn btn--primary m10-preview__next" id="preview-next">
+        ${current < total ? 'Next →' : 'Start Games →'}
+      </button>
+    </div>`;
+
+  $('#game-close-preview').onclick = () => confirmDialog('Exit Master 10?', '', closeGame);
+  const playBtn = $('#preview-play');
+  playBtn.onclick = () => speak(entry.translation, playBtn);
+  speak(entry.translation, playBtn);
+  $('#preview-next').onclick = () => { gs.index++; renderGame(); };
+}
+
 function startMaster10() {
   const gameEl = $('#game');
   gameEl.hidden = false;
@@ -565,7 +622,7 @@ function startMaster10() {
 
   $('#m10-start').onclick = () => {
     const entries = phrases.filter(p => selected.has(p.id));
-    gameSession = { type: 'master10', entries, index: 0, score: 0, answered: 0, gameTypes: ['match', 'choice', 'listen', 'listenfill', 'flip'], gameTypeIndex: 0 };
+    gameSession = { type: 'master10', entries, index: 0, score: 0, answered: 0, gameTypes: ['match', 'choice', 'listen', 'listenfill', 'flip'], gameTypeIndex: 0, phase: 'preview' };
     renderGame();
   };
 }
@@ -637,6 +694,7 @@ function renderGame() {
 
   // Master Mode: route to sub-games and handle transitions
   if (gs.type === 'master10') {
+    if (gs.phase === 'preview') { renderMaster10Preview(); return; }
     if (gs.index >= gs.entries.length) {
       if (gs.gameTypeIndex >= gs.gameTypes.length - 1) { showResult(); return; }
       gs.gameTypeIndex++;
