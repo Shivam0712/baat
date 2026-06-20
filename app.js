@@ -11,8 +11,6 @@ const CONFIG = {
   DELTA_CORRECT: 1,
   DELTA_WRONG: -1,
   DELTA_BROWSE: 1,
-  BAND_COLD_MAX: 4,
-  BAND_WARM_MAX: 15,
   GAME_MIN_PHRASES: 4,
   MC_OPTIONS: 4,
   MATCH_PAIRS: 5,
@@ -119,9 +117,21 @@ function applyMastery(id, delta) {
   save();
 }
 
+function getBandThresholds() {
+  const n = state.phrases.length;
+  if (!n) return { warmThresh: 5, hotThresh: 16 };
+  const sorted = state.phrases.map(p => p.mastery).sort((a, b) => a - b);
+  const p20 = sorted[Math.min(Math.floor(0.20 * n), n - 1)];
+  const p85 = sorted[Math.min(Math.floor(0.85 * n), n - 1)];
+  const warmThresh = Math.min(20, Math.max(5, p20));
+  const hotThresh  = Math.min(50, Math.max(15, p85));
+  return { warmThresh, hotThresh };
+}
+
 function band(m) {
-  if (m <= CONFIG.BAND_COLD_MAX) return 'cold';
-  if (m <= CONFIG.BAND_WARM_MAX) return 'warm';
+  const { warmThresh, hotThresh } = getBandThresholds();
+  if (m < warmThresh) return 'cold';
+  if (m < hotThresh)  return 'warm';
   return 'hot';
 }
 
