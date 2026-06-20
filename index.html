@@ -220,10 +220,26 @@
     <div class="sheet__row">
       <button class="btn btn--ghost" id="btn-export-txt">Export .txt</button>
     </div>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-export-wishlist">Export Wishlist</button>
+    </div>
     <input type="file" id="import-file" accept="application/json,.json" hidden>
     <p class="set-stat" id="set-stat"></p>
     <div class="sheet__row">
       <button class="btn btn--ghost" id="btn-close-settings">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Prompt Dialog -->
+<div id="copy-prompt" class="copy-prompt" hidden>
+  <div class="copy-prompt__backdrop" id="copy-prompt-backdrop"></div>
+  <div class="copy-prompt__panel">
+    <h2 class="copy-prompt__title">Wishlist Prompt</h2>
+    <textarea id="copy-prompt-text" class="copy-prompt__text" readonly></textarea>
+    <div class="copy-prompt__row">
+      <button class="btn btn--ghost" id="copy-prompt-close">Close</button>
+      <button class="btn btn--primary" id="copy-prompt-copy">Copy</button>
     </div>
   </div>
 </div>

@@ -573,6 +573,35 @@ $('#btn-export-txt').onclick = () => {
   toast('Exported .txt');
 };
 
+$('#btn-export-wishlist').onclick = () => {
+  const items = (state.wishlist || []);
+  const PROMPT = `You are a Thai translation assistant. When given a list of English words or phrases, translate each into Thai and return the results in a single Markdown code block. Format every entry exactly as:
+English:
+Thai:
+Phonetics:
+Note:
+Use natural, common Thai translations and concise notes. Do not include any extra text outside the code block. Words to translate:
+
+${items.join('\n')}`;
+  $('#copy-prompt-text').value = PROMPT;
+  $('#copy-prompt').hidden = false;
+  setTimeout(() => $('#copy-prompt-text').select(), 50);
+};
+
+$('#copy-prompt-copy').onclick = () => {
+  const ta = $('#copy-prompt-text');
+  ta.select();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(ta.value).then(() => toast('Copied!'));
+  } else {
+    document.execCommand('copy');
+    toast('Copied!');
+  }
+};
+
+$('#copy-prompt-close').onclick = () => { $('#copy-prompt').hidden = true; };
+$('#copy-prompt-backdrop').onclick = () => { $('#copy-prompt').hidden = true; };
+
 $('#btn-import-trigger').onclick = () => $('#import-file').click();
 
 $('#import-file').addEventListener('change', async e => {
