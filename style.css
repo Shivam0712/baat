@@ -599,9 +599,9 @@ button {
 .tile__icon--img {
   width: 100%;
   height: auto;
-  max-height: 55%;
+  max-height: 60%;
   border-radius: 10px;
-  object-fit: cover;
+  object-fit: contain;
   margin-bottom: auto;
   flex-shrink: 1;
   font-size: 0;
