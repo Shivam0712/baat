@@ -35,7 +35,19 @@
   <!-- VIEW: Library -->
   <section class="view" id="view-library" data-view="library">
     <header class="topbar">
-      <h1 class="topbar__title">Library</h1>
+      <div class="topbar__title-wrap">
+        <h1 class="topbar__title">Library</h1>
+        <div class="lib-list-drop" id="lib-list-drop">
+          <button class="lib-list-trigger" id="lib-list-trigger" aria-haspopup="true">
+            <span id="lib-list-label">Word List</span>
+            <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="lib-list-menu" id="lib-list-menu" hidden>
+            <button class="lib-list-opt is-active" data-list="words">Word List</button>
+            <button class="lib-list-opt" data-list="wish">Wish List</button>
+          </div>
+        </div>
+      </div>
       <div class="topbar__actions">
         <button class="topbar__btn" id="btn-settings" aria-label="Settings">
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -72,9 +84,14 @@
       </select>
     </div>
     <ul class="list" id="list"></ul>
+    <ul class="list" id="wish-list" hidden></ul>
     <div class="empty" id="library-empty" hidden>
       <p class="empty__title">No phrases yet</p>
       <p class="empty__hint">Tap + to add one, or import a .txt file.</p>
+    </div>
+    <div class="empty" id="wish-empty" hidden>
+      <p class="empty__title">Wish List is empty</p>
+      <p class="empty__hint">Open the panel on the right to add words.</p>
     </div>
   </section>
 
@@ -229,6 +246,20 @@
 
 <!-- Game overlay -->
 <div id="game" class="game" hidden></div>
+
+<!-- Wishlist -->
+<div id="wishlist-handle" class="wishlist-handle" role="button" aria-label="Wish list">
+  <span id="wishlist-arrow" class="wishlist-arrow">‹</span>
+</div>
+<div id="wishlist-drawer" class="wishlist-drawer">
+  <div class="wishlist-row wishlist-row--title">Wish List</div>
+  <div class="wishlist-row wishlist-row--input">
+    <input type="text" id="wishlist-input" class="wishlist-input" placeholder="Word or phrase…" autocomplete="off" autocorrect="off" autocapitalize="sentences">
+  </div>
+  <div class="wishlist-row wishlist-row--btn">
+    <button id="wishlist-add" class="wishlist-add-btn">Add</button>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

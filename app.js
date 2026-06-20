@@ -26,7 +26,7 @@ const $ = s => document.querySelector(s);
 /* =========================================================
    3. STORE
    ========================================================= */
-let state = { version: 1, phrases: [], settings: { lang: CONFIG.DEFAULT_LANG } };
+let state = { version: 1, phrases: [], wishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
 
 function genId() {
   return (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -40,7 +40,7 @@ function load() {
     if (raw) {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.phrases)) {
-        state = { version: 1, phrases: p.phrases, settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
+        state = { version: 1, phrases: p.phrases, wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
       }
     }
   } catch (e) {
@@ -329,9 +329,40 @@ function filteredSorted() {
   return list;
 }
 
+let libListMode = 'words';
+
 function renderLibrary() {
   const ul = $('#list');
+  const wl = $('#wish-list');
   const empty = $('#library-empty');
+  const wishEmpty = $('#wish-empty');
+  const tools = $('.library__tools');
+  const libBar = $('.lib-bar');
+
+  if (libListMode === 'wish') {
+    ul.hidden = true;
+    empty.hidden = true;
+    wl.hidden = false;
+    tools.hidden = true;
+    libBar.hidden = true;
+    const items = state.wishlist;
+    wishEmpty.hidden = items.length > 0;
+    wl.innerHTML = items.map((w, i) => `
+      <li class="list__item wish-item" data-idx="${i}">
+        <span class="list__text">
+          <span class="list__phrase">${esc(w)}</span>
+        </span>
+        <button class="wish-del" data-idx="${i}" aria-label="Remove">✕</button>
+      </li>`).join('');
+    return;
+  }
+
+  wl.hidden = true;
+  wishEmpty.hidden = true;
+  ul.hidden = false;
+  tools.hidden = false;
+  libBar.hidden = false;
+
   if (!state.phrases.length) {
     ul.innerHTML = '';
     empty.hidden = false;
@@ -354,6 +385,16 @@ function renderLibrary() {
     </li>`;
   }).join('');
 }
+
+$('#wish-list').addEventListener('click', e => {
+  const del = e.target.closest('.wish-del');
+  if (del) {
+    const idx = +del.dataset.idx;
+    state.wishlist.splice(idx, 1);
+    save();
+    renderLibrary();
+  }
+});
 
 $('#lib-search').addEventListener('input', e => {
   libFilter = e.target.value.trim().toLowerCase();
@@ -1338,6 +1379,66 @@ function init() {
   registerSW();
   renderLibrary();
   switchView('browse');
+  initLibListDrop();
+  initWishlist();
+}
+
+function initLibListDrop() {
+  const trigger = $('#lib-list-trigger');
+  const menu = $('#lib-list-menu');
+  const label = $('#lib-list-label');
+
+  trigger.onclick = e => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+  };
+
+  document.querySelectorAll('.lib-list-opt').forEach(btn => {
+    btn.onclick = () => {
+      libListMode = btn.dataset.list;
+      label.textContent = btn.textContent;
+      document.querySelectorAll('.lib-list-opt').forEach(b => b.classList.toggle('is-active', b === btn));
+      menu.hidden = true;
+      renderLibrary();
+    };
+  });
+
+  document.addEventListener('click', () => { menu.hidden = true; });
+}
+
+function initWishlist() {
+  const handle = $('#wishlist-handle');
+  const drawer = $('#wishlist-drawer');
+  const arrow  = $('#wishlist-arrow');
+  let open = false;
+
+  function toggleWishlist(forceClose) {
+    open = forceClose ? false : !open;
+    drawer.classList.toggle('is-open', open);
+    arrow.textContent = open ? '›' : '‹';
+  }
+
+  handle.onclick = () => toggleWishlist();
+
+  document.addEventListener('click', e => {
+    if (open && !drawer.contains(e.target) && !handle.contains(e.target)) toggleWishlist(true);
+  });
+
+  function doAdd() {
+    const input = $('#wishlist-input');
+    const val = input.value.trim();
+    if (!val) return;
+    if (!state.wishlist) state.wishlist = [];
+    state.wishlist.push(val);
+    save();
+    input.value = '';
+    input.focus();
+    toast('Added to Wish List');
+    if (libListMode === 'wish') renderLibrary();
+  }
+
+  $('#wishlist-add').onclick = doAdd;
+  $('#wishlist-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
 }
 
 document.addEventListener('DOMContentLoaded', init);
