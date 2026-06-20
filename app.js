@@ -543,19 +543,21 @@ function startGame(type) {
   };
 
   $('#game-start').onclick = () => {
+    const entries = weightedSample(state.phrases, batchSize);
     gameSession = {
       type,
-      entries: weightedSample(state.phrases, batchSize),
+      entries,
       index: 0,
       score: 0,
       answered: 0,
+      ...(type === 'master10' ? { gameTypes: ['match', 'choice', 'listen', 'revfill', 'flip'], gameTypeIndex: 0 } : {}),
     };
     renderGame();
   };
 }
 
 function gameTitle(type) {
-  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards' }[type] || type;
+  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', revfill: 'Rev Fill', master10: 'Master Mode' }[type] || type;
 }
 
 function gameDesc(type) {
@@ -564,6 +566,8 @@ function gameDesc(type) {
     choice: 'Pick the correct phonetic spelling.',
     listen: 'Hear the phrase and identify it.',
     flip: 'Flip the card and rate yourself.',
+    revfill: 'Hear the phrase and type it out.',
+    master10: 'Play all 5 games with the same set of phrases.',
   }[type] || '';
 }
 
@@ -571,10 +575,50 @@ function renderGame() {
   const gs = gameSession;
   const gameEl = $('#game');
 
-  if (gs.index >= gs.entries.length) {
-    showResult();
+  // Master Mode: route to sub-games and handle transitions
+  if (gs.type === 'master10') {
+    if (gs.index >= gs.entries.length) {
+      if (gs.gameTypeIndex >= gs.gameTypes.length - 1) { showResult(); return; }
+      gs.gameTypeIndex++;
+      gs.index = 0;
+      const nextType = gs.gameTypes[gs.gameTypeIndex];
+      gameEl.innerHTML = `
+        <div class="game__bar">
+          <button class="game__close" id="game-close-mid" aria-label="Close">✕</button>
+          <span class="game__score" id="game-score">✓ ${gs.score}/${gs.answered}</span>
+        </div>
+        <div class="game__body">
+          <div class="game-transition">
+            <div class="game-transition__badge">Game ${gs.gameTypeIndex + 1} of ${gs.gameTypes.length}</div>
+            <h2>Up next</h2>
+            <p class="game-transition__name">${gameTitle(nextType)}</p>
+            <p>${gameDesc(nextType)}</p>
+            <button class="btn btn--primary" id="transition-go" style="width:100%;max-width:280px">Let's go →</button>
+          </div>
+        </div>`;
+      $('#game-close-mid').onclick = () => confirmDialog('End session?', 'Your progress so far is saved.', closeGame);
+      $('#transition-go').onclick = () => renderGame();
+      return;
+    }
+    const subType = gs.gameTypes[gs.gameTypeIndex];
+    const entry = gs.entries[gs.index];
+    gameEl.innerHTML = `
+      <div class="game__bar">
+        <button class="game__close" id="game-close-mid" aria-label="Close">✕</button>
+        <span class="game__score" id="game-score">✓ ${gs.score}/${gs.answered} · ${gameTitle(subType)}</span>
+      </div>
+      <div class="game__body" id="game-body"></div>`;
+    $('#game-close-mid').onclick = () => confirmDialog('End session?', 'Your progress so far is saved.', closeGame);
+    const body = $('#game-body');
+    if (subType === 'choice') renderChoice(body, entry);
+    else if (subType === 'listen') renderListen(body, entry);
+    else if (subType === 'match') renderMatch(body);
+    else if (subType === 'flip') renderFlip(body, entry);
+    else if (subType === 'revfill') renderRevFill(body, entry);
     return;
   }
+
+  if (gs.index >= gs.entries.length) { showResult(); return; }
 
   const entry = gs.entries[gs.index];
 
@@ -594,11 +638,11 @@ function renderGame() {
   };
 
   const body = $('#game-body');
-
   if (gs.type === 'choice') renderChoice(body, entry);
   else if (gs.type === 'listen') renderListen(body, entry);
   else if (gs.type === 'match') renderMatch(body);
   else if (gs.type === 'flip') renderFlip(body, entry);
+  else if (gs.type === 'revfill') renderRevFill(body, entry);
 }
 
 function updateScore() {
@@ -666,14 +710,15 @@ function handleChoice(btn, chosen, entry, container) {
 function renderListen(body, entry) {
   const distractors = getDistractorPhrases(entry, CONFIG.MC_OPTIONS - 1);
   const allOpts = shuffle([
-    { input: entry.input, phonetics: entry.phonetics, translation: entry.translation },
-    ...distractors.map(p => ({ input: p.input, phonetics: p.phonetics, translation: p.translation })),
+    { input: entry.input, translation: entry.translation },
+    ...distractors.map(p => ({ input: p.input, translation: p.translation })),
   ]);
 
   body.innerHTML = `
     <div class="game__prompt-label">Which phrase did you hear?</div>
     <div class="listen-replay">
       <button class="btn-play" id="listen-play" aria-label="Play">▶</button>
+      <span class="listen-phon">${esc(entry.phonetics)}</span>
     </div>
     <div class="options" id="options"></div>`;
 
@@ -683,24 +728,12 @@ function renderListen(body, entry) {
 
   const optEl = $('#options');
   allOpts.forEach(opt => {
-    const row = document.createElement('div');
-    row.className = 'option-row';
-
-    const optPlayBtn = document.createElement('button');
-    optPlayBtn.className = 'opt-play';
-    optPlayBtn.setAttribute('aria-label', 'Play pronunciation');
-    optPlayBtn.textContent = '▶';
-    optPlayBtn.onclick = e => { e.stopPropagation(); speak(opt.translation, optPlayBtn); };
-
     const optBtn = document.createElement('button');
-    optBtn.className = 'option listen-option';
-    optBtn.innerHTML = `<span class="opt-input">${esc(opt.input)}</span><span class="opt-phon">${esc(opt.phonetics)}</span>`;
+    optBtn.className = 'option';
+    optBtn.textContent = opt.input;
     optBtn.dataset.input = opt.input;
     optBtn.onclick = () => handleListen(optBtn, opt.input, entry, optEl);
-
-    row.appendChild(optPlayBtn);
-    row.appendChild(optBtn);
-    optEl.appendChild(row);
+    optEl.appendChild(optBtn);
   });
 }
 
@@ -734,10 +767,7 @@ function renderMatch(body) {
     <div class="match">
       <div class="match-col" id="match-left">
         ${chunk.map(e => `
-          <div class="chip-row">
-            <button class="opt-play" data-id="${e.id}" aria-label="Play">▶</button>
-            <button class="chip" data-id="${e.id}" data-col="left">${esc(e.input)}</button>
-          </div>`).join('')}
+          <button class="chip" data-id="${e.id}" data-col="left">${esc(e.input)}</button>`).join('')}
       </div>
       <div class="match-col" id="match-right">
         ${rightItems.map(r => `
@@ -858,10 +888,9 @@ function renderFlip(body, entry) {
   };
 
   card.onclick = () => {
-    if (flipped) return;
-    flipped = true;
-    card.classList.add('flipped');
-    rateRow.style.display = 'flex';
+    flipped = !flipped;
+    card.classList.toggle('flipped', flipped);
+    rateRow.style.display = flipped ? 'flex' : 'none';
   };
 
   $('#rate-no').onclick = () => {
@@ -885,6 +914,48 @@ function renderFlip(body, entry) {
     gameSession.index++;
     renderGame();
   };
+}
+
+/* --- GAME E: Rev Fill --- */
+function renderRevFill(body, entry) {
+  body.innerHTML = `
+    <div class="game__prompt-label">Type the phrase you hear</div>
+    <div class="listen-replay">
+      <button class="btn-play" id="revfill-play" aria-label="Play">▶</button>
+      <span class="listen-phon">${esc(entry.phonetics)}</span>
+    </div>
+    <div class="revfill-wrap">
+      <input type="text" id="revfill-input" class="revfill-input" placeholder="Type here…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="btn btn--primary" id="revfill-submit">Check</button>
+      <div id="revfill-feedback" class="revfill-feedback" hidden></div>
+    </div>`;
+
+  const playBtn = $('#revfill-play');
+  playBtn.onclick = () => speak(entry.translation, playBtn);
+  speak(entry.translation, playBtn);
+
+  function check() {
+    const val = $('#revfill-input').value.trim().toLowerCase();
+    if (!val) return;
+    const correct = val === entry.input.trim().toLowerCase();
+    const fb = $('#revfill-feedback');
+    fb.hidden = false;
+    fb.textContent = correct ? '✓ Correct!' : `✗ Answer: ${entry.input}`;
+    fb.className = `revfill-feedback ${correct ? 'revfill-feedback--correct' : 'revfill-feedback--wrong'}`;
+    $('#revfill-input').disabled = true;
+    $('#revfill-submit').disabled = true;
+    applyMastery(entry.id, correct ? CONFIG.DELTA_CORRECT : CONFIG.DELTA_WRONG);
+    entry.gamesSeen++;
+    if (correct) { entry.gamesCorrect++; gameSession.score++; }
+    gameSession.answered++;
+    save();
+    updateScore();
+    advanceGame();
+  }
+
+  $('#revfill-submit').onclick = check;
+  $('#revfill-input').addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+  setTimeout(() => $('#revfill-input').focus(), 100);
 }
 
 /* --- RESULT SCREEN --- */
