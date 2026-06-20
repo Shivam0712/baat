@@ -1452,7 +1452,7 @@ function startSentenceBuilder() {
           </div>
           <div class="sb-wheel-selector"></div>
         </div>
-        <textarea class="sb-textbox" id="sb-textbox" placeholder="Tap a word on the wheel…" readonly rows="2"></textarea>
+        <textarea class="sb-textbox" id="sb-textbox" placeholder="Tap a word on the wheel…" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
         <button class="btn sb-reveal-btn" id="sb-reveal-btn">Reveal</button>
       </div>
 
@@ -1507,9 +1507,21 @@ function startSentenceBuilder() {
     const items = Array.from(wheel.querySelectorAll('.sb-wheel-item'));
     const idx = items.indexOf(item);
     scrollToIdx(idx, true);
-    $('#sb-textbox').value = item.textContent.trim();
-    currentPhrase = phrases.find(p => p.id === item.dataset.id) || null;
     items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
+    currentPhrase = phrases.find(p => p.id === item.dataset.id) || null;
+
+    // Insert at cursor, or append if cursor isn't in the box
+    const tb = $('#sb-textbox');
+    const word = item.textContent.trim();
+    const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
+    const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
+    const before = tb.value.slice(0, start);
+    const after  = tb.value.slice(end);
+    const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
+    tb.value = before + gap + word + after;
+    const cursor = start + gap.length + word.length;
+    tb.focus();
+    tb.setSelectionRange(cursor, cursor);
   });
 
   $('#sb-close').onclick = closeGame;
