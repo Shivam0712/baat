@@ -339,10 +339,13 @@ function renderLibrary() {
   const tools = $('.library__tools');
   const libBar = $('.lib-bar');
 
+  const syncBar = $('#wish-sync-bar');
+
   if (libListMode === 'wish') {
     ul.hidden = true;
     empty.hidden = true;
     wl.hidden = false;
+    syncBar.hidden = false;
     tools.hidden = true;
     libBar.hidden = true;
     const items = state.wishlist;
@@ -359,6 +362,7 @@ function renderLibrary() {
 
   wl.hidden = true;
   wishEmpty.hidden = true;
+  syncBar.hidden = true;
   ul.hidden = false;
   tools.hidden = false;
   libBar.hidden = false;
@@ -395,6 +399,16 @@ $('#wish-list').addEventListener('click', e => {
     renderLibrary();
   }
 });
+
+$('#btn-wish-sync').onclick = () => {
+  const phraseSet = new Set(state.phrases.map(p => p.input.toLowerCase()));
+  const before = state.wishlist.length;
+  state.wishlist = state.wishlist.filter(w => !phraseSet.has(w.toLowerCase()));
+  const cleared = before - state.wishlist.length;
+  save();
+  renderLibrary();
+  toast(cleared > 0 ? `Cleared ${cleared} word${cleared > 1 ? 's' : ''} already in Word List` : 'Nothing to clear');
+};
 
 $('#lib-search').addEventListener('input', e => {
   libFilter = e.target.value.trim().toLowerCase();
