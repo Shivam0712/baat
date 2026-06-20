@@ -684,7 +684,7 @@ function startMaster10() {
     const picks = [];
     const hotPicks  = pick(hot,  1);
     const warmPicks = pick(warm, 4);
-    const coldPicks = pick(cold, 6 + (1 - hotPicks.length) + (4 - warmPicks.length));
+    const coldPicks = pick(cold, 5 + (1 - hotPicks.length) + (4 - warmPicks.length));
     picks.push(...hotPicks, ...warmPicks, ...coldPicks);
     // if still under 10 (not enough phrases total), just fill from remaining
     if (picks.length < Math.min(10, phrases.length)) {
