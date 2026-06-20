@@ -802,6 +802,7 @@ function startMaster10() {
 
 function startGame(type) {
   if (type === 'master10') { startMaster10(); return; }
+  if (type === 'sentbuild') { startSentenceBuilder(); return; }
   const maxBatch = state.phrases.length;
   const defaultBatch = Math.min(10, maxBatch);
 
@@ -847,7 +848,7 @@ function startGame(type) {
 }
 
 function gameTitle(type) {
-  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', listenfill: 'Listen & Fill', master10: 'Master 10' }[type] || type;
+  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', listenfill: 'Listen & Fill', master10: 'Master 10', sentbuild: 'Sentence Builder' }[type] || type;
 }
 
 function gameDesc(type) {
@@ -858,6 +859,7 @@ function gameDesc(type) {
     flip: 'Flip the card and rate yourself.',
     listenfill: 'Hear the phrase and type it out.',
     master10: 'Choose your phrases, then play all 5 games.',
+    sentbuild: 'Scroll the phonetics wheel, pick one, then reveal its meaning.',
   }[type] || '';
 }
 
@@ -1394,6 +1396,134 @@ function getDistractors(entry, field, count) {
     }
   }
   return picked;
+}
+
+/* =========================================================
+   19b. SENTENCE BUILDER
+   ========================================================= */
+function startSentenceBuilder() {
+  const gameEl = $('#game');
+  gameEl.hidden = false;
+
+  const phrases = state.phrases
+    .filter(p => p.phonetics)
+    .slice()
+    .sort((a, b) => (a.phonetics || '').localeCompare(b.phonetics || ''));
+
+  let score = { right: 0, wrong: 0 };
+  let currentPhrase = null;
+  let judged = false;
+
+  function scoreLabel() { return `Right: ${score.right} · Wrong: ${score.wrong}`; }
+
+  const ITEM_H = 44;
+  const VISIBLE = 5;
+  const PAD = Math.floor(VISIBLE / 2) * ITEM_H;
+
+  gameEl.innerHTML = `
+    <div class="game__bar">
+      <button class="game__close" id="sb-close" aria-label="Close">✕</button>
+      <span class="game__score" id="sb-score">${scoreLabel()}</span>
+    </div>
+    <div class="sb-body" id="sb-body">
+      <div class="sb-build" id="sb-build">
+        <div class="sb-wheel-wrap">
+          <div class="sb-wheel" id="sb-wheel">
+            <div style="height:${PAD}px"></div>
+            ${phrases.map(p => `<div class="sb-wheel-item" data-id="${p.id}">${esc(p.phonetics)}</div>`).join('')}
+            <div style="height:${PAD}px"></div>
+          </div>
+          <div class="sb-wheel-fade sb-wheel-fade--top"></div>
+          <div class="sb-wheel-fade sb-wheel-fade--bot"></div>
+          <div class="sb-wheel-selector"></div>
+        </div>
+        <textarea class="sb-textbox" id="sb-textbox" placeholder="Click a phonetic above…" readonly rows="2"></textarea>
+        <button class="btn btn--primary sb-reveal-btn" id="sb-reveal">Reveal</button>
+      </div>
+
+      <div class="sb-result" id="sb-result" hidden>
+        <div class="sb-result-field">
+          <span class="sb-result-label">Phonetics</span>
+          <div class="sb-result-val" id="sb-r-phonetic"></div>
+        </div>
+        <div class="sb-result-field">
+          <span class="sb-result-label">English</span>
+          <div class="sb-result-val" id="sb-r-english"></div>
+        </div>
+        <div class="sb-result-field">
+          <span class="sb-result-label">Translation</span>
+          <div class="sb-result-val sb-result-val--xl" id="sb-r-translation"></div>
+        </div>
+        <p class="sb-apple-hint">Select all and translate using Apple to check</p>
+        <div class="sb-judge-row">
+          <button class="btn sb-right-btn" id="sb-right">I'm Right</button>
+          <button class="btn sb-wrong-btn" id="sb-wrong">I'm Wrong</button>
+        </div>
+        <button class="btn btn--primary sb-next-btn" id="sb-next" disabled>Next</button>
+      </div>
+    </div>`;
+
+  $('#sb-close').onclick = closeGame;
+
+  $('#sb-wheel').addEventListener('click', e => {
+    const item = e.target.closest('.sb-wheel-item');
+    if (!item) return;
+    const wheel = $('#sb-wheel');
+    const targetScroll = item.offsetTop - PAD;
+    wheel.scrollTo({ top: targetScroll, behavior: 'smooth' });
+    $('#sb-textbox').value = item.textContent.trim();
+    currentPhrase = phrases.find(p => p.id === item.dataset.id) || null;
+  });
+
+  $('#sb-reveal').onclick = () => {
+    const phonetic = $('#sb-textbox').value.trim();
+    if (!phonetic) { toast('Tap a phonetic on the wheel first'); return; }
+
+    const match = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase());
+    currentPhrase = match || null;
+    judged = false;
+
+    $('#sb-r-phonetic').textContent = phonetic;
+    $('#sb-r-english').textContent = match ? match.input : '—';
+    $('#sb-r-translation').textContent = match ? match.translation : '—';
+    $('#sb-next').disabled = true;
+    $('#sb-right').classList.remove('sb-judged');
+    $('#sb-wrong').classList.remove('sb-judged');
+
+    const build = $('#sb-build');
+    build.classList.add('sb-build--exit');
+    setTimeout(() => {
+      build.hidden = true;
+      const result = $('#sb-result');
+      result.hidden = false;
+      result.classList.add('sb-result--enter');
+    }, 280);
+  };
+
+  function judge(correct) {
+    if (judged) return;
+    judged = true;
+    if (currentPhrase) applyMastery(currentPhrase.id, correct ? 1 : -1);
+    if (correct) score.right++; else score.wrong++;
+    $('#sb-score').textContent = scoreLabel();
+    $('#sb-next').disabled = false;
+    $('#sb-right').classList.toggle('sb-judged--right', correct);
+    $('#sb-wrong').classList.toggle('sb-judged--wrong', !correct);
+  }
+
+  $('#sb-right').onclick = () => judge(true);
+  $('#sb-wrong').onclick = () => judge(false);
+
+  $('#sb-next').onclick = () => {
+    currentPhrase = null;
+    judged = false;
+    $('#sb-textbox').value = '';
+    $('#sb-result').hidden = true;
+    $('#sb-result').classList.remove('sb-result--enter');
+    const build = $('#sb-build');
+    build.classList.remove('sb-build--exit');
+    build.hidden = false;
+  };
 }
 
 function shuffle(arr) {

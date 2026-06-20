@@ -1731,6 +1731,224 @@ button {
 .lib-list-opt.is-active { color: var(--accent); font-weight: 700; }
 
 /* =========================================================
+   TILE EMOJI ICON
+   ========================================================= */
+.tile__icon--emoji {
+  font-size: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  line-height: 1;
+}
+
+/* =========================================================
+   SENTENCE BUILDER GAME
+   ========================================================= */
+.sb-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Build phase */
+.sb-build {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 20px;
+  gap: 12px;
+  transition: opacity .28s ease, transform .28s ease;
+}
+
+.sb-build--exit {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+
+/* Wheel */
+.sb-wheel-wrap {
+  flex: 1;
+  position: relative;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.sb-wheel {
+  height: 100%;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.sb-wheel::-webkit-scrollbar { display: none; }
+
+.sb-wheel-item {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 16px;
+  text-align: center;
+  transition: color .1s;
+}
+
+.sb-wheel-item:active { color: var(--accent); }
+
+.sb-wheel-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.sb-wheel-fade--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-elev) 0%, transparent 100%);
+}
+
+.sb-wheel-fade--bot {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-elev) 0%, transparent 100%);
+}
+
+.sb-wheel-selector {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  right: 12px;
+  height: 44px;
+  transform: translateY(-50%);
+  border-top: 1px solid var(--hair-strong);
+  border-bottom: 1px solid var(--hair-strong);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Text box */
+.sb-textbox {
+  width: 100%;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: 16px;
+  font-family: var(--font);
+  padding: 12px 14px;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.sb-reveal-btn {
+  flex: none;
+  height: 48px;
+}
+
+/* Result phase */
+.sb-result {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px calc(16px + var(--safe-bottom));
+  gap: 12px;
+  overflow-y: auto;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.sb-result--enter {
+  animation: sbResultIn .3s var(--ease) forwards;
+}
+
+@keyframes sbResultIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sb-result-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sb-result-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-3);
+}
+
+.sb-result-val {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  padding: 10px 14px;
+  background: var(--bg-sunken);
+  border-radius: var(--r-sm);
+  user-select: text;
+}
+
+.sb-result-val--xl { font-size: 22px; }
+
+.sb-apple-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: -4px 0 0;
+}
+
+.sb-judge-row {
+  display: flex;
+  gap: 10px;
+}
+
+.sb-right-btn {
+  flex: 1;
+  height: 46px;
+  background: color-mix(in srgb, #16a34a 14%, var(--bg-elev));
+  color: #16a34a;
+  border: 1.5px solid color-mix(in srgb, #16a34a 30%, transparent);
+}
+
+.sb-wrong-btn {
+  flex: 1;
+  height: 46px;
+  background: color-mix(in srgb, var(--hot) 14%, var(--bg-elev));
+  color: var(--hot);
+  border: 1.5px solid color-mix(in srgb, var(--hot) 30%, transparent);
+}
+
+.sb-right-btn.sb-judged--right {
+  background: #16a34a;
+  color: #fff;
+}
+
+.sb-wrong-btn.sb-judged--wrong {
+  background: var(--hot);
+  color: #fff;
+}
+
+.sb-next-btn {
+  flex: none;
+  height: 48px;
+}
+
+.sb-next-btn:disabled { opacity: .4; }
+
+/* =========================================================
    COPY PROMPT DIALOG
    ========================================================= */
 .copy-prompt {
