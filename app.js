@@ -1434,7 +1434,7 @@ function startSentenceBuilder() {
   const PAD    = 104;  // = 2 × ITEM_H, so first/last item can center
 
   let score = { right: 0, wrong: 0 };
-  let currentPhrase = null;
+  let droppedPhrases = [];  // all phrases tapped from wheel this round
   let judged = false;
 
   gameEl.innerHTML = `
@@ -1508,7 +1508,8 @@ function startSentenceBuilder() {
     const idx = items.indexOf(item);
     scrollToIdx(idx, true);
     items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
-    currentPhrase = phrases.find(p => p.id === item.dataset.id) || null;
+    const tapped = phrases.find(p => p.id === item.dataset.id);
+    if (tapped) droppedPhrases.push(tapped);
 
     // Insert at cursor, or append if cursor isn't in the box
     const tb = $('#sb-textbox');
@@ -1530,16 +1531,18 @@ function startSentenceBuilder() {
     const phonetic = $('#sb-textbox').value.trim();
     if (!phonetic) { toast('Tap a word on the wheel first'); return; }
 
-    // currentPhrase is set by the last wheel tap; fall back to text match
-    if (!currentPhrase) {
-      currentPhrase = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase()) || null;
-    }
-    const match = currentPhrase;
     judged = false;
 
     $('#sb-r-phonetic').textContent = phonetic;
-    $('#sb-r-english').textContent  = match ? match.input       : '—';
-    $('#sb-r-translation').textContent = match ? match.translation : '—';
+    if (droppedPhrases.length) {
+      $('#sb-r-english').textContent      = droppedPhrases.map(p => p.input).join('\n');
+      $('#sb-r-translation').textContent  = droppedPhrases.map(p => p.translation).join('\n');
+    } else {
+      // manual text — try single phrase match
+      const match = phrases.find(p => p.phonetics.toLowerCase() === phonetic.toLowerCase());
+      $('#sb-r-english').textContent      = match ? match.input       : '—';
+      $('#sb-r-translation').textContent  = match ? match.translation : '—';
+    }
     $('#sb-next').disabled = true;
     $('#sb-right').classList.remove('sb-judged--right');
     $('#sb-wrong').classList.remove('sb-judged--wrong');
@@ -1557,7 +1560,7 @@ function startSentenceBuilder() {
   function judge(correct) {
     if (judged) return;
     judged = true;
-    if (currentPhrase) applyMastery(currentPhrase.id, correct ? 1 : -1);
+    droppedPhrases.forEach(p => applyMastery(p.id, correct ? 1 : -1));
     if (correct) score.right++; else score.wrong++;
     $('#sb-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
     $('#sb-next').disabled = false;
@@ -1569,7 +1572,7 @@ function startSentenceBuilder() {
   $('#sb-wrong').onclick = () => judge(false);
 
   $('#sb-next').onclick = () => {
-    currentPhrase = null;
+    droppedPhrases = [];
     judged = false;
     $('#sb-textbox').value = '';
     const result = $('#sb-result');
