@@ -304,6 +304,9 @@ function renderLibrary() {
     const b = band(p.mastery);
     return `<li class="list__item" data-id="${p.id}">
       <span class="list__bar" style="--tier-color:${bandColor(b)}"></span>
+      <button class="list__play opt-play" data-phrase="${esc(p.translation)}" aria-label="Play">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
       <span class="list__text">
         <span class="list__phrase">${esc(p.input)}</span>
         <span class="list__sub">${b} · ${Math.round(p.mastery)}%</span>
@@ -324,6 +327,8 @@ $('#lib-sort').addEventListener('change', e => {
 });
 
 $('#list').addEventListener('click', e => {
+  const playBtn = e.target.closest('.list__play');
+  if (playBtn) { speak(playBtn.dataset.phrase, playBtn); return; }
   const li = e.target.closest('.list__item');
   if (li) openEditor(li.dataset.id);
 });

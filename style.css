@@ -497,6 +497,10 @@ button {
 
 .list__item:active { transform: scale(.985); }
 
+.list__play {
+  flex-shrink: 0;
+}
+
 .list__bar {
   flex: 0 0 4px;
   align-self: stretch;
