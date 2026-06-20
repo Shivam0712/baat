@@ -1457,7 +1457,16 @@ function initWishlist() {
     const input = $('#wishlist-input');
     const val = input.value.trim();
     if (!val) return;
+    const lower = val.toLowerCase();
+    if (state.phrases.some(p => p.input.toLowerCase() === lower)) {
+      toast('Already in Word List');
+      return;
+    }
     if (!state.wishlist) state.wishlist = [];
+    if (state.wishlist.some(w => w.toLowerCase() === lower)) {
+      toast('Already in Wish List');
+      return;
+    }
     state.wishlist.push(val);
     save();
     input.value = '';
