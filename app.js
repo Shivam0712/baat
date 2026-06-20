@@ -269,6 +269,27 @@ $('#btn-shuffle').onclick = doShuffle;
 /* =========================================================
    12. LIBRARY VIEW
    ========================================================= */
+let libFilter = '', libSort = 'az';
+
+function filteredSorted() {
+  let list = state.phrases.slice();
+  if (libFilter) {
+    const q = libFilter;
+    list = list.filter(p =>
+      p.input.toLowerCase().includes(q) ||
+      p.translation.toLowerCase().includes(q) ||
+      (p.phonetics && p.phonetics.toLowerCase().includes(q))
+    );
+  }
+  switch (libSort) {
+    case 'za':       list.sort((a, b) => b.input.localeCompare(a.input)); break;
+    case 'coldwarm': list.sort((a, b) => a.mastery - b.mastery); break;
+    case 'warmcold': list.sort((a, b) => b.mastery - a.mastery); break;
+    default:         list.sort((a, b) => a.input.localeCompare(b.input));
+  }
+  return list;
+}
+
 function renderLibrary() {
   const ul = $('#list');
   const empty = $('#library-empty');
@@ -277,8 +298,9 @@ function renderLibrary() {
     empty.hidden = false;
     return;
   }
-  empty.hidden = true;
-  ul.innerHTML = state.phrases.map(p => {
+  const list = filteredSorted();
+  empty.hidden = list.length > 0;
+  ul.innerHTML = list.map(p => {
     const b = band(p.mastery);
     return `<li class="list__item" data-id="${p.id}">
       <span class="list__bar" style="--tier-color:${bandColor(b)}"></span>
@@ -290,6 +312,16 @@ function renderLibrary() {
     </li>`;
   }).join('');
 }
+
+$('#lib-search').addEventListener('input', e => {
+  libFilter = e.target.value.trim().toLowerCase();
+  renderLibrary();
+});
+
+$('#lib-sort').addEventListener('change', e => {
+  libSort = e.target.value;
+  renderLibrary();
+});
 
 $('#list').addEventListener('click', e => {
   const li = e.target.closest('.list__item');
