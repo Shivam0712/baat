@@ -1199,6 +1199,7 @@ function renderProgress() {
     return;
   }
 
+  const { warmThresh, hotThresh } = getBandThresholds();
   const coldList = state.phrases.filter(p => band(p.mastery) === 'cold');
   const warmList = state.phrases.filter(p => band(p.mastery) === 'warm');
   const hotList  = state.phrases.filter(p => band(p.mastery) === 'hot');
@@ -1262,7 +1263,8 @@ function renderProgress() {
         </div>
       </div>
     </div>
-    <p class="prog-summary">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>`;
+    <p class="prog-summary">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>
+    <p class="prog-thresholds">Warm ≥ ${Math.round(warmThresh)} · Hot ≥ ${Math.round(hotThresh)}</p>`;
 }
 
 /* =========================================================

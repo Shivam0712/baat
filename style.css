@@ -1578,6 +1578,16 @@ button {
   margin: -8px 0 0;
 }
 
+.prog-thresholds {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+  opacity: .6;
+  margin: 4px 0 0;
+  letter-spacing: .02em;
+}
+
 /* =========================================================
    MASTER 10 WORD PICKER
    ========================================================= */
