@@ -1601,10 +1601,12 @@ button {
   height: 40px;
   font-size: 14px;
   margin-bottom: 14px;
+  flex: none;
 }
 
 #m10-start {
   height: 40px;
+  flex: none;
 }
 
 .m10-list {
