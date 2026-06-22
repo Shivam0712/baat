@@ -741,10 +741,14 @@ $('#import-file').addEventListener('change', async e => {
   if (!f) return;
   try {
     const data = JSON.parse(await f.text());
-    if (!data || !Array.isArray(data.phrases)) throw 0;
-    confirmDialog('Import backup?', 'Phrases, sentences and wishlist will be merged.', () => {
-      const existing = new Set(state.phrases.map(p => p.id));
-      data.phrases.forEach(p => { if (!existing.has(p.id)) state.phrases.push(p); });
+    if (!data || typeof data !== 'object') throw 0;
+    const hasAny = data.phrases || data.sentences || data.wishlist || data.sentWishlist;
+    if (!hasAny) throw 0;
+    confirmDialog('Import backup?', 'All lists (phrases, sentences, wishlists) will be merged.', () => {
+      if (Array.isArray(data.phrases)) {
+        const existing = new Set(state.phrases.map(p => p.id));
+        data.phrases.forEach(p => { if (!existing.has(p.id)) state.phrases.push(p); });
+      }
       if (Array.isArray(data.sentences)) {
         const existingSent = new Set(state.sentences.map(s => s.id));
         data.sentences.forEach(s => { if (!existingSent.has(s.id)) state.sentences.push(s); });
