@@ -2132,6 +2132,45 @@ button {
 }
 
 /* =========================================================
+   SENTENCE LEARN LIST PANEL (left side mirror of wishlist)
+   ========================================================= */
+.sent-wish-handle {
+  right: auto;
+  left: 0;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  bottom: calc(var(--tabbar-h) + 130px);
+  box-shadow: 2px 0 12px rgba(0,0,0,.15);
+}
+
+.sent-wish-drawer {
+  right: auto;
+  left: 28px;
+  border-right: 1px solid var(--hair-strong);
+  border-left: none;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  bottom: calc(var(--tabbar-h) + 130px);
+  transform: translateX(-110%);
+  box-shadow: 4px 0 20px rgba(0,0,0,.12);
+}
+
+.sent-wish-drawer.is-open { transform: translateX(0); }
+
+.sent-wish-textarea {
+  resize: none;
+  height: auto;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 6px 0;
+}
+
+.sent-wish-drawer .wishlist-row--input {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  align-items: flex-start;
+}
+
+/* =========================================================
    WISH SYNC BAR
    ========================================================= */
 .wish-sync-bar {

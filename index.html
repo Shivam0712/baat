@@ -46,6 +46,7 @@
             <button class="lib-list-opt is-active" data-list="words">Word List</button>
             <button class="lib-list-opt" data-list="wish">Wish List</button>
             <button class="lib-list-opt" data-list="sentences">Sentences</button>
+            <button class="lib-list-opt" data-list="sentlearn">Sentence Learn List</button>
           </div>
         </div>
       </div>
@@ -107,6 +108,11 @@
     <div class="empty" id="sentence-empty" hidden>
       <p class="empty__title">No sentences yet</p>
       <p class="empty__hint">Use Settings → Generate Sentences Prompt, then import the result.</p>
+    </div>
+    <ul class="list" id="sent-wish-list" hidden></ul>
+    <div class="empty" id="sent-wish-empty" hidden>
+      <p class="empty__title">Sentence Learn List is empty</p>
+      <p class="empty__hint">Open the panel on the left to add sentences.</p>
     </div>
   </section>
 
@@ -319,6 +325,20 @@
 
 <!-- Game overlay -->
 <div id="game" class="game" hidden></div>
+
+<!-- Sentence Learn List panel (left side) -->
+<div id="sent-wish-handle" class="wishlist-handle sent-wish-handle" role="button" aria-label="Sentence learn list">
+  <span id="sent-wish-arrow" class="wishlist-arrow">›</span>
+</div>
+<div id="sent-wish-drawer" class="wishlist-drawer sent-wish-drawer">
+  <div class="wishlist-row wishlist-row--title">Sentence Learn List</div>
+  <div class="wishlist-row wishlist-row--input">
+    <textarea id="sent-wish-input" class="wishlist-input sent-wish-textarea" placeholder="Type an English sentence…" rows="2" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+  </div>
+  <div class="wishlist-row">
+    <button class="btn wishlist-add-btn" id="sent-wish-add">Add</button>
+  </div>
+</div>
 
 <!-- Wishlist -->
 <div id="wishlist-handle" class="wishlist-handle" role="button" aria-label="Wish list">

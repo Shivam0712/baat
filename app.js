@@ -26,7 +26,7 @@ const $ = s => document.querySelector(s);
 /* =========================================================
    3. STORE
    ========================================================= */
-let state = { version: 1, phrases: [], sentences: [], wishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
+let state = { version: 1, phrases: [], sentences: [], wishlist: [], sentWishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
 
 function genId() {
   return (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -40,7 +40,7 @@ function load() {
     if (raw) {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.phrases)) {
-        state = { version: 1, phrases: p.phrases, sentences: Array.isArray(p.sentences) ? p.sentences : [], wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
+        state = { version: 1, phrases: p.phrases, sentences: Array.isArray(p.sentences) ? p.sentences : [], wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], sentWishlist: Array.isArray(p.sentWishlist) ? p.sentWishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
       }
     }
   } catch (e) {
@@ -356,16 +356,18 @@ function renderLibrary() {
   const ul = $('#list');
   const wl = $('#wish-list');
   const sl = $('#sentence-list');
+  const swl = $('#sent-wish-list');
   const empty = $('#library-empty');
   const wishEmpty = $('#wish-empty');
   const sentEmpty = $('#sentence-empty');
+  const swEmpty = $('#sent-wish-empty');
   const tools = $('.library__tools');
   const libBar = $('.lib-bar');
   const syncBar = $('#wish-sync-bar');
   const sentImport = $('#sentence-import-bar');
 
   // hide everything first
-  [ul, wl, sl, empty, wishEmpty, sentEmpty, syncBar, sentImport].forEach(el => { el.hidden = true; });
+  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport].forEach(el => { el.hidden = true; });
   tools.hidden = false;
   libBar.hidden = false;
 
@@ -382,6 +384,22 @@ function renderLibrary() {
           <span class="list__phrase">${esc(w)}</span>
         </span>
         <button class="wish-del" data-idx="${i}" aria-label="Remove">✕</button>
+      </li>`).join('');
+    return;
+  }
+
+  if (libListMode === 'sentlearn') {
+    tools.hidden = true;
+    libBar.hidden = true;
+    swl.hidden = false;
+    const items = state.sentWishlist;
+    swEmpty.hidden = items.length > 0;
+    swl.innerHTML = items.map((w, i) => `
+      <li class="list__item wish-item" data-idx="${i}">
+        <span class="list__text">
+          <span class="list__phrase">${esc(w)}</span>
+        </span>
+        <button class="wish-del sent-wish-del" data-idx="${i}" aria-label="Remove">✕</button>
       </li>`).join('');
     return;
   }
@@ -445,6 +463,16 @@ $('#wish-list').addEventListener('click', e => {
   if (del) {
     const idx = +del.dataset.idx;
     state.wishlist.splice(idx, 1);
+    save();
+    renderLibrary();
+  }
+});
+
+$('#sent-wish-list').addEventListener('click', e => {
+  const del = e.target.closest('.sent-wish-del');
+  if (del) {
+    const idx = +del.dataset.idx;
+    state.sentWishlist.splice(idx, 1);
     save();
     renderLibrary();
   }
@@ -724,6 +752,10 @@ $('#import-file').addEventListener('change', async e => {
       if (Array.isArray(data.wishlist)) {
         const existingWish = new Set(state.wishlist.map(w => w.toLowerCase()));
         data.wishlist.forEach(w => { if (!existingWish.has(w.toLowerCase())) state.wishlist.push(w); });
+      }
+      if (Array.isArray(data.sentWishlist)) {
+        const existingSW = new Set(state.sentWishlist.map(w => w.toLowerCase()));
+        data.sentWishlist.forEach(w => { if (!existingSW.has(w.toLowerCase())) state.sentWishlist.push(w); });
       }
       if (data.settings?.lang) state.settings.lang = data.settings.lang;
       save();
@@ -1707,6 +1739,7 @@ function init() {
   switchView('browse');
   initLibListDrop();
   initWishlist();
+  initSentWishlist();
   initGenSentencesSheet();
 }
 
@@ -1775,6 +1808,47 @@ function initWishlist() {
 
   $('#wishlist-add').onclick = doAdd;
   $('#wishlist-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+}
+
+function initSentWishlist() {
+  const handle = $('#sent-wish-handle');
+  const drawer = $('#sent-wish-drawer');
+  const arrow  = $('#sent-wish-arrow');
+  let open = false;
+
+  function toggleSentWishlist(forceClose) {
+    open = forceClose ? false : !open;
+    drawer.classList.toggle('is-open', open);
+    arrow.textContent = open ? '‹' : '›';
+  }
+
+  handle.onclick = () => toggleSentWishlist();
+
+  document.addEventListener('click', e => {
+    if (open && !drawer.contains(e.target) && !handle.contains(e.target)) toggleSentWishlist(true);
+  });
+
+  function doAdd() {
+    const input = $('#sent-wish-input');
+    const val = input.value.trim();
+    if (!val) return;
+    if (!state.sentWishlist) state.sentWishlist = [];
+    if (state.sentWishlist.some(w => w.toLowerCase() === val.toLowerCase())) {
+      toast('Already in Sentence Learn List');
+      return;
+    }
+    state.sentWishlist.push(val);
+    save();
+    input.value = '';
+    input.focus();
+    toast('Added to Sentence Learn List');
+    if (libListMode === 'sentlearn') renderLibrary();
+  }
+
+  $('#sent-wish-add').onclick = doAdd;
+  $('#sent-wish-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doAdd(); }
+  });
 }
 
 function initGenSentencesSheet() {
@@ -1854,9 +1928,12 @@ ${selected.join('\n')}`;
    SENTENCE PRACTICE GAME
    ========================================================= */
 function startSentencePractice() {
-  const sentences = state.sentences.filter(s => s.phonetics);
+  // full entries (have phonetics) + raw sentWishlist items wrapped as simple targets
+  const fullSentences = state.sentences.filter(s => s.phonetics);
+  const rawSentences  = (state.sentWishlist || []).map(t => ({ id: 'raw:' + t, input: t, phonetics: null, translation: null }));
+  const sentences = [...fullSentences, ...rawSentences];
   if (!sentences.length) {
-    toast('No sentences yet. Import sentences via Library → Sentences.');
+    toast('No sentences yet. Add some via the left panel or import via Library → Sentences.');
     return;
   }
   const phrases = state.phrases.filter(p => p.phonetics).sort((a, b) => a.phonetics.localeCompare(b.phonetics));
@@ -1915,13 +1992,17 @@ function startSentencePractice() {
           <span class="sb-result-label">Your attempt</span>
           <div class="sb-result-val" id="sp-r-attempt"></div>
         </div>
-        <div class="sb-result-field">
+        <div class="sb-result-field" id="sp-r-phonetic-wrap">
           <span class="sb-result-label">Correct phonetics</span>
           <div class="sb-result-val" id="sp-r-phonetic"></div>
         </div>
-        <div class="sb-result-field">
+        <div class="sb-result-field" id="sp-r-translation-wrap">
           <span class="sb-result-label">Translation</span>
           <div class="sb-result-val sb-result-val--xl" id="sp-r-translation"></div>
+        </div>
+        <div class="sb-result-field" id="sp-r-english-wrap" hidden>
+          <span class="sb-result-label">Original sentence</span>
+          <div class="sb-result-val" id="sp-r-english"></div>
         </div>
         <div class="sb-judge-row">
           <button class="btn sb-right-btn" id="sp-right">I'm Right</button>
@@ -1983,9 +2064,17 @@ function startSentencePractice() {
       const attempt = $('#sp-textbox').value.trim();
       if (!attempt) { toast('Build some phonetics first.'); return; }
       judged = false;
+      const isRaw = !currentSentence.phonetics;
       $('#sp-r-attempt').textContent = attempt;
-      $('#sp-r-phonetic').textContent = currentSentence.phonetics || '—';
-      $('#sp-r-translation').textContent = currentSentence.translation;
+      $('#sp-r-phonetic-wrap').hidden = isRaw;
+      $('#sp-r-translation-wrap').hidden = isRaw;
+      $('#sp-r-english-wrap').hidden = !isRaw;
+      if (!isRaw) {
+        $('#sp-r-phonetic').textContent = currentSentence.phonetics;
+        $('#sp-r-translation').textContent = currentSentence.translation;
+      } else {
+        $('#sp-r-english').textContent = currentSentence.input;
+      }
       $('#sp-right').classList.remove('sb-judged--right');
       $('#sp-wrong').classList.remove('sb-judged--wrong');
       $('#sp-next').disabled = true;
@@ -2003,7 +2092,7 @@ function startSentencePractice() {
     function judge(correct) {
       if (judged) return;
       judged = true;
-      applySentenceMastery(currentSentence.id, correct ? 1 : -1);
+      if (!currentSentence.id.startsWith('raw:')) applySentenceMastery(currentSentence.id, correct ? 1 : -1);
       if (correct) score.right++; else score.wrong++;
       $('#sp-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
       $('#sp-next').disabled = false;
