@@ -26,7 +26,7 @@ const $ = s => document.querySelector(s);
 /* =========================================================
    3. STORE
    ========================================================= */
-let state = { version: 1, phrases: [], wishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
+let state = { version: 1, phrases: [], sentences: [], wishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
 
 function genId() {
   return (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -40,7 +40,7 @@ function load() {
     if (raw) {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.phrases)) {
-        state = { version: 1, phrases: p.phrases, wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
+        state = { version: 1, phrases: p.phrases, sentences: Array.isArray(p.sentences) ? p.sentences : [], wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
       }
     }
   } catch (e) {
@@ -104,6 +104,27 @@ function parseBlocks(text) {
 }
 function updatePhrase(id, patch) { const e = state.phrases.find(x => x.id === id); if (e) { Object.assign(e, patch); save(); } }
 function removePhrase(id) { state.phrases = state.phrases.filter(x => x.id !== id); save(); }
+
+function newSentence(input, translation, phonetics, note) {
+  return { id: genId(), input, translation, phonetics: phonetics||'', note: note||'', mastery: 0, pinned: false };
+}
+function addSentence(input, translation, phonetics, note) { state.sentences.push(newSentence(input, translation, phonetics, note)); save(); }
+function updateSentence(id, patch) { const e = state.sentences.find(x => x.id === id); if (e) { Object.assign(e, patch); save(); } }
+function removeSentence(id) { state.sentences = state.sentences.filter(x => x.id !== id); save(); }
+function bulkAddSentences(arr) {
+  arr.forEach(o => {
+    const s = newSentence(o.input, o.translation, o.phonetics, o.note);
+    if (o.mastery !== undefined && o.mastery !== '') s.mastery = clampM(Number(o.mastery) || 0);
+    state.sentences.push(s);
+  });
+  save();
+}
+function applySentenceMastery(id, delta) {
+  const e = state.sentences.find(x => x.id === id);
+  if (!e) return;
+  e.mastery = clampM(e.mastery + delta);
+  save();
+}
 
 /* =========================================================
    4. MASTERY
@@ -334,20 +355,25 @@ let libListMode = 'words';
 function renderLibrary() {
   const ul = $('#list');
   const wl = $('#wish-list');
+  const sl = $('#sentence-list');
   const empty = $('#library-empty');
   const wishEmpty = $('#wish-empty');
+  const sentEmpty = $('#sentence-empty');
   const tools = $('.library__tools');
   const libBar = $('.lib-bar');
-
   const syncBar = $('#wish-sync-bar');
+  const sentImport = $('#sentence-import-bar');
+
+  // hide everything first
+  [ul, wl, sl, empty, wishEmpty, sentEmpty, syncBar, sentImport].forEach(el => { el.hidden = true; });
+  tools.hidden = false;
+  libBar.hidden = false;
 
   if (libListMode === 'wish') {
-    ul.hidden = true;
-    empty.hidden = true;
-    wl.hidden = false;
-    syncBar.hidden = false;
     tools.hidden = true;
     libBar.hidden = true;
+    wl.hidden = false;
+    syncBar.hidden = false;
     const items = state.wishlist;
     wishEmpty.hidden = items.length > 0;
     wl.innerHTML = items.map((w, i) => `
@@ -360,15 +386,36 @@ function renderLibrary() {
     return;
   }
 
-  wl.hidden = true;
-  wishEmpty.hidden = true;
-  syncBar.hidden = true;
-  ul.hidden = false;
-  tools.hidden = false;
-  libBar.hidden = false;
+  if (libListMode === 'sentences') {
+    tools.hidden = true;
+    libBar.hidden = true;
+    sentImport.hidden = false;
+    sl.hidden = false;
+    const items = state.sentences;
+    sentEmpty.hidden = items.length > 0;
+    sl.innerHTML = items.map(s => {
+      const b = band(s.mastery);
+      return `<li class="list__item" data-id="${s.id}" data-type="sentence">
+        <span class="list__bar" style="--tier-color:${bandColor(b)}"></span>
+        <button class="list__play opt-play" data-phrase="${esc(s.translation)}" aria-label="Play">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <span class="list__text">
+          <span class="list__phrase">${esc(s.input)}</span>
+          <span class="list__sub">${b} · ${Math.round(s.mastery)}%</span>
+        </span>
+        <button class="list__pin${s.pinned ? ' is-pinned' : ''}" data-id="${s.id}" data-type="sentence" aria-label="${s.pinned ? 'Unpin' : 'Pin'}">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="${s.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
+        <span class="list__chev">›</span>
+      </li>`;
+    }).join('');
+    return;
+  }
 
+  // words mode
+  ul.hidden = false;
   if (!state.phrases.length) {
-    ul.innerHTML = '';
     empty.hidden = false;
     return;
   }
@@ -436,18 +483,33 @@ $('#list').addEventListener('click', e => {
   if (li) openEditor(li.dataset.id);
 });
 
+$('#sentence-list').addEventListener('click', e => {
+  const playBtn = e.target.closest('.list__play');
+  if (playBtn) { speak(playBtn.dataset.phrase, playBtn); return; }
+  const pinBtn = e.target.closest('.list__pin');
+  if (pinBtn) {
+    const s = state.sentences.find(x => x.id === pinBtn.dataset.id);
+    if (s) { s.pinned = !s.pinned; save(); renderLibrary(); }
+    return;
+  }
+  const li = e.target.closest('.list__item');
+  if (li) openEditor(li.dataset.id, 'sentence');
+});
+
 /* =========================================================
    13. EDITOR SHEET
    ========================================================= */
 let editingId = null;
-
+let editingType = 'phrase';
 let editorPasteMode = false;
 
-function openEditor(id) {
+function openEditor(id, type) {
   editingId = id || null;
+  editingType = type || (libListMode === 'sentences' ? 'sentence' : 'phrase');
   editorPasteMode = false;
-  const e = id ? state.phrases.find(x => x.id === id) : null;
-  $('#editor-title').textContent = id ? 'Edit phrase' : 'Add phrase';
+  const collection = editingType === 'sentence' ? state.sentences : state.phrases;
+  const e = id ? collection.find(x => x.id === id) : null;
+  $('#editor-title').textContent = id ? `Edit ${editingType}` : `Add ${editingType}`;
   $('#f-input').value = e ? e.input : '';
   $('#f-translation').value = e ? e.translation : '';
   $('#f-phonetics').value = e ? e.phonetics : '';
@@ -463,7 +525,7 @@ function openEditor(id) {
   $('#editor').hidden = false;
 }
 
-function closeEditor() { $('#editor').hidden = true; editingId = null; editorPasteMode = false; }
+function closeEditor() { $('#editor').hidden = true; editingId = null; editingType = 'phrase'; editorPasteMode = false; }
 
 $('#tab-manual').onclick = () => {
   editorPasteMode = false;
@@ -484,7 +546,7 @@ $('#tab-paste').onclick = () => {
   $('#btn-save').textContent = 'Import';
 };
 
-$('#btn-add').onclick = () => openEditor(null);
+$('#btn-add').onclick = () => openEditor(null, libListMode === 'sentences' ? 'sentence' : 'phrase');
 $('#btn-cancel').onclick = closeEditor;
 $('#editor .sheet__backdrop').onclick = closeEditor;
 
@@ -494,7 +556,7 @@ $('#btn-save').onclick = () => {
     if (!text) { toast('Nothing to import.'); return; }
     const { valid, skipped } = parseBlocks(text);
     if (!valid.length) { toast('No valid entries found. Check format.'); return; }
-    bulkAdd(valid);
+    if (editingType === 'sentence') { bulkAddSentences(valid); } else { bulkAdd(valid); }
     closeEditor();
     renderLibrary();
     toast(`Added ${valid.length}` + (skipped.length ? ` · skipped ${skipped.length}` : ''));
@@ -505,23 +567,27 @@ $('#btn-save').onclick = () => {
   const p = $('#f-phonetics').value.trim();
   const n = $('#f-note').value.trim();
   if (!i || !t) { toast('Phrase and translation are required.'); return; }
-  if (editingId) {
-    updatePhrase(editingId, { input: i, translation: t, phonetics: p, note: n });
+  if (editingType === 'sentence') {
+    if (editingId) { updateSentence(editingId, { input: i, translation: t, phonetics: p, note: n }); }
+    else { addSentence(i, t, p, n); }
   } else {
-    addPhrase(i, t, p, n);
+    if (editingId) { updatePhrase(editingId, { input: i, translation: t, phonetics: p, note: n }); }
+    else { addPhrase(i, t, p, n); }
   }
+  const savedId = editingId;
   closeEditor();
   renderLibrary();
-  if (currentBrowseId === editingId) {
-    renderBrowseCard(state.phrases.find(x => x.id === editingId));
+  if (editingType !== 'sentence' && currentBrowseId === savedId) {
+    renderBrowseCard(state.phrases.find(x => x.id === savedId));
   }
 };
 
 $('#btn-delete').onclick = () => {
   const id = editingId;
-  confirmDialog('Delete this phrase?', "This can't be undone.", () => {
-    removePhrase(id);
-    if (currentBrowseId === id) { currentBrowseId = null; }
+  const type = editingType;
+  confirmDialog(`Delete this ${type}?`, "This can't be undone.", () => {
+    if (type === 'sentence') { removeSentence(id); }
+    else { removePhrase(id); if (currentBrowseId === id) { currentBrowseId = null; } }
     closeEditor();
     renderLibrary();
     if ($('#view-browse').classList.contains('is-active')) doShuffle();
@@ -541,6 +607,16 @@ $('#file-upload').addEventListener('change', async e => {
   e.target.value = '';
 });
 
+$('#sentence-file-upload').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const { valid, skipped } = parseBlocks(await file.text());
+  if (valid.length) bulkAddSentences(valid);
+  renderLibrary();
+  toast(`Added ${valid.length} sentence${valid.length !== 1 ? 's' : ''}` + (skipped.length ? ` · skipped ${skipped.length}` : ''));
+  e.target.value = '';
+});
+
 
 /* =========================================================
    15. SETTINGS SHEET
@@ -552,7 +628,7 @@ function openSettings() {
   sel.innerHTML = langs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
   sel.value = state.settings.lang;
   $('#lang-note').hidden = !!pickVoice(state.settings.lang);
-  $('#set-stat').textContent = `${state.phrases.length} phrases stored`;
+  $('#set-stat').textContent = `${state.phrases.length} phrases · ${state.sentences.length} sentences`;
   $('#settings').hidden = false;
 }
 
@@ -596,19 +672,24 @@ $('#btn-export-txt').onclick = () => {
   toast('Exported .txt');
 };
 
+function openCopyPrompt(title, text) {
+  $('#copy-prompt-title').textContent = title;
+  $('#copy-prompt-text').value = text;
+  $('#copy-prompt').hidden = false;
+  setTimeout(() => $('#copy-prompt-text').select(), 50);
+}
+
 $('#btn-export-wishlist').onclick = () => {
   const items = (state.wishlist || []);
   const PROMPT = `You are a Thai translation assistant. When given a list of English words or phrases, translate each into Thai and return the results in a single Markdown code block. Format every entry exactly as:
 English:
-Thai:
+Translation:
 Phonetics:
 Note:
 Use natural, common Thai translations and concise notes. Do not include any extra text outside the code block. Words to translate:
 
 ${items.join('\n')}`;
-  $('#copy-prompt-text').value = PROMPT;
-  $('#copy-prompt').hidden = false;
-  setTimeout(() => $('#copy-prompt-text').select(), 50);
+  openCopyPrompt('Wishlist Prompt', PROMPT);
 };
 
 $('#copy-prompt-copy').onclick = () => {
@@ -633,9 +714,13 @@ $('#import-file').addEventListener('change', async e => {
   try {
     const data = JSON.parse(await f.text());
     if (!data || !Array.isArray(data.phrases)) throw 0;
-    confirmDialog('Import backup?', 'New phrases and wishlist items will be merged into your library.', () => {
+    confirmDialog('Import backup?', 'Phrases, sentences and wishlist will be merged.', () => {
       const existing = new Set(state.phrases.map(p => p.id));
       data.phrases.forEach(p => { if (!existing.has(p.id)) state.phrases.push(p); });
+      if (Array.isArray(data.sentences)) {
+        const existingSent = new Set(state.sentences.map(s => s.id));
+        data.sentences.forEach(s => { if (!existingSent.has(s.id)) state.sentences.push(s); });
+      }
       if (Array.isArray(data.wishlist)) {
         const existingWish = new Set(state.wishlist.map(w => w.toLowerCase()));
         data.wishlist.forEach(w => { if (!existingWish.has(w.toLowerCase())) state.wishlist.push(w); });
@@ -657,11 +742,13 @@ $('#import-file').addEventListener('change', async e => {
 $('#practice-hub').addEventListener('click', e => {
   const t = e.target.closest('.tile');
   if (!t) return;
+  const game = t.dataset.game;
+  if (game === 'sentpractice') { startGame(game); return; }
   if (state.phrases.length < CONFIG.GAME_MIN_PHRASES) {
     toast(`Add at least ${CONFIG.GAME_MIN_PHRASES} phrases to play.`);
     return;
   }
-  startGame(t.dataset.game);
+  startGame(game);
 });
 
 /* =========================================================
@@ -820,6 +907,7 @@ function startMaster10() {
 function startGame(type) {
   if (type === 'master10') { startMaster10(); return; }
   if (type === 'sentbuild') { startSentenceBuilder(); return; }
+  if (type === 'sentpractice') { startSentencePractice(); return; }
   const maxBatch = state.phrases.length;
   const defaultBatch = Math.min(10, maxBatch);
 
@@ -865,7 +953,7 @@ function startGame(type) {
 }
 
 function gameTitle(type) {
-  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', listenfill: 'Listen & Fill', master10: 'Master 10', sentbuild: 'Sentence Builder' }[type] || type;
+  return { match: 'Match-up', choice: 'Multiple Choice', listen: 'Listen & Choose', flip: 'Flashcards', listenfill: 'Listen & Fill', master10: 'Master 10', sentbuild: 'Sentence Builder', sentpractice: 'Sentence Practice' }[type] || type;
 }
 
 function gameDesc(type) {
@@ -877,6 +965,7 @@ function gameDesc(type) {
     listenfill: 'Hear the phrase and type it out.',
     master10: 'Choose your phrases, then play all 5 games.',
     sentbuild: 'Scroll the phonetics wheel, pick one, then reveal its meaning.',
+    sentpractice: 'See an English sentence, build it in phonetics using the wheel, then reveal.',
   }[type] || '';
 }
 
@@ -1618,6 +1707,7 @@ function init() {
   switchView('browse');
   initLibListDrop();
   initWishlist();
+  initGenSentencesSheet();
 }
 
 function initLibListDrop() {
@@ -1685,6 +1775,252 @@ function initWishlist() {
 
   $('#wishlist-add').onclick = doAdd;
   $('#wishlist-input').addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+}
+
+function initGenSentencesSheet() {
+  let genMode = 'random';
+  let manualSelected = new Set();
+
+  const sheet = $('#gen-sentences-sheet');
+  const panels = { random: $('#gen-sent-panel-random'), manual: $('#gen-sent-panel-manual'), all: $('#gen-sent-panel-all') };
+
+  document.querySelectorAll('.gen-sent-mode').forEach(btn => {
+    btn.onclick = () => {
+      genMode = btn.dataset.mode;
+      document.querySelectorAll('.gen-sent-mode').forEach(b => b.classList.toggle('is-active', b === btn));
+      Object.keys(panels).forEach(k => { panels[k].hidden = k !== genMode; });
+    };
+  });
+
+  $('#btn-gen-sentences').onclick = () => {
+    const words = state.phrases.map(p => p.input);
+    if (!words.length) { toast('Add some words to your Word List first.'); return; }
+
+    manualSelected = new Set();
+    genMode = 'random';
+    document.querySelectorAll('.gen-sent-mode').forEach(b => b.classList.toggle('is-active', b.dataset.mode === 'random'));
+    Object.keys(panels).forEach(k => { panels[k].hidden = k !== 'random'; });
+
+    $('#gen-sent-count').value = Math.min(10, words.length);
+    $('#gen-sent-all-count').textContent = words.length;
+
+    const cl = $('#gen-sent-checklist');
+    cl.innerHTML = words.map(w => `<li class="gen-sent-check-item" data-word="${esc(w)}">${esc(w)}</li>`).join('');
+    cl.querySelectorAll('.gen-sent-check-item').forEach(li => {
+      li.onclick = () => {
+        const w = li.dataset.word;
+        if (manualSelected.has(w)) { manualSelected.delete(w); li.classList.remove('is-selected'); }
+        else { manualSelected.add(w); li.classList.add('is-selected'); }
+      };
+    });
+
+    sheet.hidden = false;
+  };
+
+  $('#gen-sent-cancel').onclick = () => { sheet.hidden = true; };
+  $('#gen-sentences-backdrop').onclick = () => { sheet.hidden = true; };
+
+  $('#gen-sent-generate').onclick = () => {
+    let selected = [];
+    if (genMode === 'all') {
+      selected = state.phrases.map(p => p.input);
+    } else if (genMode === 'manual') {
+      selected = [...manualSelected];
+      if (!selected.length) { toast('Select at least one word.'); return; }
+    } else {
+      const n = Math.max(1, Math.min(state.phrases.length, parseInt($('#gen-sent-count').value) || 10));
+      selected = shuffle(state.phrases.map(p => p.input)).slice(0, n);
+    }
+
+    const PROMPT = `You are a Thai language teacher helping a beginner build everyday conversational skills. Using the following English words and phrases that the learner already knows, create natural everyday sentences that incorporate those words.
+
+For each sentence provide exactly:
+English: [English sentence]
+Translation: [Thai script]
+Phonetics: [romanized phonetics]
+Note: [brief usage note]
+
+Separate entries with a blank line. Create at least 20 sentences. Use natural spoken Thai suited for a beginner. Do not include any extra text outside the entries.
+
+Words to incorporate:
+${selected.join('\n')}`;
+
+    sheet.hidden = true;
+    openCopyPrompt('Sentences Prompt', PROMPT);
+  };
+}
+
+/* =========================================================
+   SENTENCE PRACTICE GAME
+   ========================================================= */
+function startSentencePractice() {
+  const sentences = state.sentences.filter(s => s.phonetics);
+  if (!sentences.length) {
+    toast('No sentences yet. Import sentences via Library → Sentences.');
+    return;
+  }
+  const phrases = state.phrases.filter(p => p.phonetics).sort((a, b) => a.phonetics.localeCompare(b.phonetics));
+  if (!phrases.length) {
+    toast('Add words with phonetics to use the wheel.');
+    return;
+  }
+
+  const ITEM_H = 52;
+  const PAD    = 104;
+  const gameEl = $('#game');
+  gameEl.hidden = false;
+
+  let score = { right: 0, wrong: 0 };
+  let currentSentence = null;
+  let droppedPhrases = [];
+  let judged = false;
+
+  // Mastery-weighted pick: cold first, then warm, then hot
+  function pickSentence(exclude) {
+    const pool = sentences.filter(s => s.id !== exclude);
+    if (!pool.length) return sentences[0];
+    const cold = pool.filter(s => band(s.mastery) === 'cold');
+    const warm = pool.filter(s => band(s.mastery) === 'warm');
+    const hot  = pool.filter(s => band(s.mastery) === 'hot');
+    const bucket = cold.length ? cold : warm.length ? warm : hot;
+    return bucket[Math.floor(Math.random() * bucket.length)];
+  }
+
+  function buildHTML(sentence) {
+    return `
+    <div class="game__bar">
+      <button class="btn game__close" id="sp-close" aria-label="Close">✕</button>
+      <span class="game__score" id="sp-score">Right: 0 · Wrong: 0</span>
+    </div>
+    <div class="sb-body">
+      <div class="sb-build" id="sp-build">
+        <div class="sp-sentence-card">
+          <span class="sp-sentence-label">Build the phonetics for:</span>
+          <p class="sp-sentence-text" id="sp-sentence-text">${esc(sentence.input)}</p>
+        </div>
+        <div class="sb-wheel-wrap">
+          <div class="sb-wheel" id="sp-wheel">
+            <div style="height:${PAD}px;flex-shrink:0"></div>
+            ${phrases.map(p => `<div class="sb-wheel-item" data-id="${p.id}">${esc(p.phonetics)}</div>`).join('')}
+            <div style="height:${PAD}px;flex-shrink:0"></div>
+          </div>
+          <div class="sb-wheel-selector"></div>
+        </div>
+        <textarea class="sb-textbox" id="sp-textbox" placeholder="Tap words from the wheel…" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
+        <button class="btn sb-reveal-btn" id="sp-reveal-btn">Reveal</button>
+      </div>
+
+      <div class="sb-result" id="sp-result" hidden>
+        <div class="sb-result-field">
+          <span class="sb-result-label">Your attempt</span>
+          <div class="sb-result-val" id="sp-r-attempt"></div>
+        </div>
+        <div class="sb-result-field">
+          <span class="sb-result-label">Correct phonetics</span>
+          <div class="sb-result-val" id="sp-r-phonetic"></div>
+        </div>
+        <div class="sb-result-field">
+          <span class="sb-result-label">Translation</span>
+          <div class="sb-result-val sb-result-val--xl" id="sp-r-translation"></div>
+        </div>
+        <div class="sb-judge-row">
+          <button class="btn sb-right-btn" id="sp-right">I'm Right</button>
+          <button class="btn sb-wrong-btn" id="sp-wrong">I'm Wrong</button>
+        </div>
+        <button class="btn sb-next-btn" id="sp-next" disabled>Next →</button>
+      </div>
+    </div>`;
+  }
+
+  function loadSentence(sentence) {
+    currentSentence = sentence;
+    droppedPhrases = [];
+    judged = false;
+    gameEl.innerHTML = buildHTML(sentence);
+    bindHandlers();
+  }
+
+  function bindHandlers() {
+    const wheel = $('#sp-wheel');
+
+    function scrollToIdx(i, smooth) { wheel.scrollTo({ top: i * ITEM_H, behavior: smooth ? 'smooth' : 'instant' }); }
+    function centerIdx() { return Math.round(wheel.scrollTop / ITEM_H); }
+    function updateHighlight() {
+      const ci = centerIdx();
+      wheel.querySelectorAll('.sb-wheel-item').forEach((el, i) => el.classList.toggle('is-center', i === ci));
+    }
+
+    wheel.addEventListener('scroll', updateHighlight, { passive: true });
+    scrollToIdx(0, false);
+    requestAnimationFrame(updateHighlight);
+
+    wheel.addEventListener('click', e => {
+      const item = e.target.closest('.sb-wheel-item');
+      if (!item) return;
+      const items = Array.from(wheel.querySelectorAll('.sb-wheel-item'));
+      const idx = items.indexOf(item);
+      scrollToIdx(idx, true);
+      items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
+      const tapped = phrases.find(p => p.id === item.dataset.id);
+      if (tapped) droppedPhrases.push(tapped);
+
+      const tb = $('#sp-textbox');
+      const word = item.textContent.trim();
+      const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
+      const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
+      const before = tb.value.slice(0, start);
+      const after  = tb.value.slice(end);
+      const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
+      tb.value = before + gap + word + after;
+      const cursor = start + gap.length + word.length;
+      tb.focus();
+      tb.setSelectionRange(cursor, cursor);
+    });
+
+    $('#sp-close').onclick = closeGame;
+
+    $('#sp-reveal-btn').onclick = () => {
+      const attempt = $('#sp-textbox').value.trim();
+      if (!attempt) { toast('Build some phonetics first.'); return; }
+      judged = false;
+      $('#sp-r-attempt').textContent = attempt;
+      $('#sp-r-phonetic').textContent = currentSentence.phonetics || '—';
+      $('#sp-r-translation').textContent = currentSentence.translation;
+      $('#sp-right').classList.remove('sb-judged--right');
+      $('#sp-wrong').classList.remove('sb-judged--wrong');
+      $('#sp-next').disabled = true;
+
+      const build = $('#sp-build');
+      build.classList.add('sb-build--exit');
+      setTimeout(() => {
+        build.hidden = true;
+        const result = $('#sp-result');
+        result.hidden = false;
+        requestAnimationFrame(() => requestAnimationFrame(() => result.classList.add('sb-result--enter')));
+      }, 260);
+    };
+
+    function judge(correct) {
+      if (judged) return;
+      judged = true;
+      applySentenceMastery(currentSentence.id, correct ? 1 : -1);
+      if (correct) score.right++; else score.wrong++;
+      $('#sp-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
+      $('#sp-next').disabled = false;
+      $('#sp-right').classList.toggle('sb-judged--right', correct);
+      $('#sp-wrong').classList.toggle('sb-judged--wrong', !correct);
+    }
+
+    $('#sp-right').onclick = () => judge(true);
+    $('#sp-wrong').onclick = () => judge(false);
+
+    $('#sp-next').onclick = () => {
+      const next = pickSentence(currentSentence.id);
+      loadSentence(next);
+    };
+  }
+
+  loadSentence(pickSentence(null));
 }
 
 document.addEventListener('DOMContentLoaded', init);

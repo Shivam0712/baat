@@ -45,6 +45,7 @@
           <div class="lib-list-menu" id="lib-list-menu" hidden>
             <button class="lib-list-opt is-active" data-list="words">Word List</button>
             <button class="lib-list-opt" data-list="wish">Wish List</button>
+            <button class="lib-list-opt" data-list="sentences">Sentences</button>
           </div>
         </div>
       </div>
@@ -88,6 +89,13 @@
       <button class="btn btn--ghost wish-sync-btn" id="btn-wish-sync">Sync &amp; Clear</button>
     </div>
     <ul class="list" id="wish-list" hidden></ul>
+    <div id="sentence-import-bar" class="wish-sync-bar" hidden>
+      <label class="btn btn--ghost wish-sync-btn" style="cursor:pointer">
+        Import .txt
+        <input type="file" id="sentence-file-upload" accept=".txt,text/plain" hidden>
+      </label>
+    </div>
+    <ul class="list" id="sentence-list" hidden></ul>
     <div class="empty" id="library-empty" hidden>
       <p class="empty__title">No phrases yet</p>
       <p class="empty__hint">Tap + to add one, or import a .txt file.</p>
@@ -95,6 +103,10 @@
     <div class="empty" id="wish-empty" hidden>
       <p class="empty__title">Wish List is empty</p>
       <p class="empty__hint">Open the panel on the right to add words.</p>
+    </div>
+    <div class="empty" id="sentence-empty" hidden>
+      <p class="empty__title">No sentences yet</p>
+      <p class="empty__hint">Use Settings → Generate Sentences Prompt, then import the result.</p>
     </div>
   </section>
 
@@ -132,6 +144,10 @@
       <button class="tile" data-game="sentbuild">
         <img class="tile__icon tile__icon--img" src="icons/SentenceBuilder.png" alt="Sentence Builder">
         <span class="tile__name">Sentence Builder</span>
+      </button>
+      <button class="tile" data-game="sentpractice">
+        <span class="tile__icon tile__icon--emoji">🗣️</span>
+        <span class="tile__name">Sentence Practice</span>
       </button>
     </div>
   </section>
@@ -230,6 +246,9 @@
     <div class="sheet__row">
       <button class="btn btn--ghost" id="btn-export-wishlist">Export Wishlist</button>
     </div>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="btn-gen-sentences">Generate Sentences Prompt</button>
+    </div>
     <input type="file" id="import-file" accept="application/json,.json" hidden>
     <p class="set-stat" id="set-stat"></p>
     <div class="sheet__row">
@@ -242,11 +261,42 @@
 <div id="copy-prompt" class="copy-prompt" hidden>
   <div class="copy-prompt__backdrop" id="copy-prompt-backdrop"></div>
   <div class="copy-prompt__panel">
-    <h2 class="copy-prompt__title">Wishlist Prompt</h2>
+    <h2 class="copy-prompt__title" id="copy-prompt-title">Prompt</h2>
     <textarea id="copy-prompt-text" class="copy-prompt__text" readonly></textarea>
     <div class="copy-prompt__row">
       <button class="btn btn--ghost" id="copy-prompt-close">Close</button>
       <button class="btn btn--primary" id="copy-prompt-copy">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Sentences Sheet -->
+<div id="gen-sentences-sheet" class="sheet" hidden>
+  <div class="sheet__backdrop" id="gen-sentences-backdrop"></div>
+  <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="gen-sentences-title">
+    <div class="sheet__grip"></div>
+    <h2 class="sheet__title" id="gen-sentences-title">Generate Sentences Prompt</h2>
+    <div class="gen-sent-modes">
+      <button class="gen-sent-mode is-active" data-mode="random">Random N</button>
+      <button class="gen-sent-mode" data-mode="manual">Manual</button>
+      <button class="gen-sent-mode" data-mode="all">All</button>
+    </div>
+    <div id="gen-sent-panel-random" class="gen-sent-panel">
+      <label class="field">
+        <span class="field__label">How many words?</span>
+        <input type="number" id="gen-sent-count" class="gen-sent-count-input" min="1" max="200" value="10">
+      </label>
+    </div>
+    <div id="gen-sent-panel-manual" class="gen-sent-panel" hidden>
+      <p class="gen-sent-hint">Tap words to select them</p>
+      <ul class="gen-sent-checklist" id="gen-sent-checklist"></ul>
+    </div>
+    <div id="gen-sent-panel-all" class="gen-sent-panel" hidden>
+      <p class="gen-sent-hint">All <span id="gen-sent-all-count">0</span> words will be included.</p>
+    </div>
+    <div class="sheet__row">
+      <button class="btn btn--ghost" id="gen-sent-cancel">Cancel</button>
+      <button class="btn btn--primary" id="gen-sent-generate">Generate →</button>
     </div>
   </div>
 </div>
