@@ -891,11 +891,12 @@ function startMaster10() {
   const gameEl = $('#game');
   gameEl.hidden = false;
   const selected = new Set();
-  const phrases = state.phrases.slice().sort((a, b) => {
-    if (b.pinned && !a.pinned) return 1;
-    if (a.pinned && !b.pinned) return -1;
-    return a.input.localeCompare(b.input);
-  });
+  const allPhrases = state.phrases.slice();
+  let m10Sort = 'pinned';
+
+  function sortedPhrases() {
+    return applySort(allPhrases.slice(), m10Sort);
+  }
 
   gameEl.innerHTML = `
     <div class="game__bar">
@@ -905,21 +906,35 @@ function startMaster10() {
     <div class="game__body m10-body">
       <h2 class="m10-heading">Master 10</h2>
       <p class="m10-sub-heading">Pick phrases to master, or go random.</p>
-      <button class="btn btn--ghost m10-random-btn" id="m10-random">🎲 Pick ${Math.min(10, phrases.length)} randomly</button>
-      <div class="m10-list" id="m10-list">
-        ${phrases.map(p => {
-          const b = band(p.mastery);
-          return `<div class="m10-item" data-id="${p.id}">
-            <span class="m10-check"></span>
-            <span class="m10-text">
-              <span class="m10-phrase">${esc(p.input)}${p.pinned ? ' <span class="m10-pin-dot">📍</span>' : ''}</span>
-              <span class="m10-tier">${b} · ${Math.round(p.mastery)}%</span>
-            </span>
-          </div>`;
-        }).join('')}
+      <div class="m10-sort-bar">
+        <select id="m10-sort">
+          <option value="pinned">Saved First</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+          <option value="coldwarm">Cold → Hot</option>
+          <option value="warmcold">Hot → Cold</option>
+        </select>
       </div>
+      <button class="btn btn--ghost m10-random-btn" id="m10-random">🎲 Pick ${Math.min(10, allPhrases.length)} randomly</button>
+      <div class="m10-list" id="m10-list"></div>
       <button class="btn btn--primary" id="m10-start" disabled>Start</button>
     </div>`;
+
+  function renderList() {
+    const phrases = sortedPhrases();
+    $('#m10-list').innerHTML = phrases.map(p => {
+      const b = band(p.mastery);
+      const on = selected.has(p.id);
+      return `<div class="m10-item${on ? ' is-selected' : ''}" data-id="${p.id}">
+        <span class="m10-check">${on ? '✓' : ''}</span>
+        <span class="m10-text">
+          <span class="m10-phrase">${esc(p.input)}${p.pinned ? ' <span class="m10-pin-dot">📍</span>' : ''}</span>
+          <span class="m10-tier">${b} · ${Math.round(p.mastery)}%</span>
+        </span>
+      </div>`;
+    }).join('');
+  }
+  renderList();
 
   function updateUI() {
     $('#m10-count').textContent = `${selected.size} selected`;
@@ -930,28 +945,28 @@ function startMaster10() {
 
   $('#game-close-setup').onclick = closeGame;
 
+  $('#m10-sort').addEventListener('change', e => {
+    m10Sort = e.target.value;
+    renderList();
+  });
+
   $('#m10-random').onclick = () => {
     selected.clear();
-    const cold = phrases.filter(p => band(p.mastery) === 'cold').sort((a, b) => a.mastery - b.mastery);
-    const warm = shuffle(phrases.filter(p => band(p.mastery) === 'warm'));
-    const hot  = shuffle(phrases.filter(p => band(p.mastery) === 'hot'));
+    const cold = allPhrases.filter(p => band(p.mastery) === 'cold').sort((a, b) => a.mastery - b.mastery);
+    const warm = shuffle(allPhrases.filter(p => band(p.mastery) === 'warm'));
+    const hot  = shuffle(allPhrases.filter(p => band(p.mastery) === 'hot'));
     const pick = (pool, n) => pool.slice(0, n);
     const picks = [];
     const hotPicks  = pick(hot,  1);
     const warmPicks = pick(warm, 4);
     const coldPicks = pick(cold, 5 + (1 - hotPicks.length) + (4 - warmPicks.length));
     picks.push(...hotPicks, ...warmPicks, ...coldPicks);
-    // if still under 10 (not enough phrases total), just fill from remaining
-    if (picks.length < Math.min(10, phrases.length)) {
+    if (picks.length < Math.min(10, allPhrases.length)) {
       const used = new Set(picks.map(p => p.id));
-      phrases.filter(p => !used.has(p.id)).slice(0, Math.min(10, phrases.length) - picks.length).forEach(p => picks.push(p));
+      allPhrases.filter(p => !used.has(p.id)).slice(0, Math.min(10, allPhrases.length) - picks.length).forEach(p => picks.push(p));
     }
     picks.forEach(p => selected.add(p.id));
-    document.querySelectorAll('.m10-item').forEach(el => {
-      const on = selected.has(el.dataset.id);
-      el.classList.toggle('is-selected', on);
-      el.querySelector('.m10-check').textContent = on ? '✓' : '';
-    });
+    renderList();
     updateUI();
   };
 
@@ -965,7 +980,7 @@ function startMaster10() {
   });
 
   $('#m10-start').onclick = () => {
-    const entries = phrases.filter(p => selected.has(p.id));
+    const entries = allPhrases.filter(p => selected.has(p.id));
     gameSession = { type: 'master10', entries, index: 0, score: 0, answered: 0, gameTypes: ['match', 'choice', 'listen', 'listenfill', 'flip'], gameTypeIndex: 0, phase: 'preview' };
     renderGame();
   };

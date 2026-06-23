@@ -1596,6 +1596,22 @@ button {
   color: var(--text-2);
 }
 
+.m10-sort-bar {
+  margin-bottom: 10px;
+}
+
+.m10-sort-bar select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--r-sm);
+  background: var(--bg-elev);
+  color: var(--text);
+  font-size: 13px;
+  padding: 0 10px;
+  outline: none;
+}
+
 .m10-random-btn {
   width: 100%;
   height: 110px;
