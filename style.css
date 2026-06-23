@@ -2299,6 +2299,31 @@ button {
   font-weight: 600;
 }
 
+/* Correct translation row with play button */
+.sp-translation-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sp-translation-row .sb-result-val { flex: 1; }
+
+.sp-play-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid var(--hair-strong);
+  background: var(--bg-elev);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s;
+}
+.sp-play-btn:active { background: var(--bg-sunken); }
+
 /* =========================================================
    SENTENCE PRACTICE — sentence card at top
    ========================================================= */

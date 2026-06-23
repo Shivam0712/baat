@@ -1993,20 +1993,33 @@ function startSentencePractice() {
 
       <div class="sb-result" id="sp-result" hidden>
         <div class="sb-result-field">
-          <span class="sb-result-label">Your attempt</span>
+          <span class="sb-result-label">Input sentence</span>
+          <div class="sb-result-val" id="sp-r-input"></div>
+        </div>
+        <div class="sb-result-field">
+          <span class="sb-result-label">My attempt</span>
           <div class="sb-result-val" id="sp-r-attempt"></div>
+        </div>
+        <div class="sb-result-field" id="sp-r-eng-map-wrap">
+          <span class="sb-result-label">English mapping</span>
+          <div class="sb-result-val" id="sp-r-eng-map"></div>
+        </div>
+        <div class="sb-result-field" id="sp-r-thai-map-wrap">
+          <span class="sb-result-label">Thai mapping</span>
+          <div class="sb-result-val sb-result-val--xl" id="sp-r-thai-map"></div>
         </div>
         <div class="sb-result-field" id="sp-r-phonetic-wrap">
           <span class="sb-result-label">Correct phonetics</span>
           <div class="sb-result-val" id="sp-r-phonetic"></div>
         </div>
         <div class="sb-result-field" id="sp-r-translation-wrap">
-          <span class="sb-result-label">Translation</span>
-          <div class="sb-result-val sb-result-val--xl" id="sp-r-translation"></div>
-        </div>
-        <div class="sb-result-field" id="sp-r-english-wrap" hidden>
-          <span class="sb-result-label">Original sentence</span>
-          <div class="sb-result-val" id="sp-r-english"></div>
+          <span class="sb-result-label">Correct translation</span>
+          <div class="sp-translation-row">
+            <div class="sb-result-val sb-result-val--xl" id="sp-r-translation"></div>
+            <button class="sp-play-btn" id="sp-play-btn" aria-label="Play">
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+            </button>
+          </div>
         </div>
         <div class="sb-judge-row">
           <button class="btn sb-right-btn" id="sp-right">I'm Right</button>
@@ -2069,16 +2082,28 @@ function startSentencePractice() {
       if (!attempt) { toast('Build some phonetics first.'); return; }
       judged = false;
       const isRaw = !currentSentence.phonetics;
+      const hasDropped = droppedPhrases.length > 0;
+
+      $('#sp-r-input').textContent = currentSentence.input;
       $('#sp-r-attempt').textContent = attempt;
+
+      // English / Thai mapping from dropped wheel words
+      $('#sp-r-eng-map-wrap').hidden = !hasDropped;
+      $('#sp-r-thai-map-wrap').hidden = !hasDropped;
+      if (hasDropped) {
+        $('#sp-r-eng-map').textContent  = droppedPhrases.map(p => p.input).join('  ·  ');
+        $('#sp-r-thai-map').textContent = droppedPhrases.map(p => p.translation).join('  ·  ');
+      }
+
+      // Correct phonetics + translation (only for full entries)
       $('#sp-r-phonetic-wrap').hidden = isRaw;
       $('#sp-r-translation-wrap').hidden = isRaw;
-      $('#sp-r-english-wrap').hidden = !isRaw;
       if (!isRaw) {
-        $('#sp-r-phonetic').textContent = currentSentence.phonetics;
-        $('#sp-r-translation').textContent = currentSentence.translation;
-      } else {
-        $('#sp-r-english').textContent = currentSentence.input;
+        $('#sp-r-phonetic').textContent     = currentSentence.phonetics;
+        $('#sp-r-translation').textContent  = currentSentence.translation;
+        $('#sp-play-btn').onclick = () => speak(currentSentence.translation, $('#sp-play-btn'));
       }
+
       $('#sp-right').classList.remove('sb-judged--right');
       $('#sp-wrong').classList.remove('sb-judged--wrong');
       $('#sp-next').disabled = true;
