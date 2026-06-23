@@ -369,12 +369,10 @@ function renderLibrary() {
   const tools = $('.library__tools');
   const libBar = $('.lib-bar');
   const syncBar = $('#wish-sync-bar');
-  const sentImport = $('#sentence-import-bar');
-
   const sentLearnBar = $('#sent-learn-prompt-bar');
   const sentSortBar = $('#sentence-sort-bar');
   // hide everything first
-  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport, sentLearnBar, sentSortBar].forEach(el => { el.hidden = true; });
+  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentLearnBar, sentSortBar].forEach(el => { el.hidden = true; });
   tools.hidden = false;
   libBar.hidden = false;
 
@@ -415,7 +413,6 @@ function renderLibrary() {
   if (libListMode === 'sentences') {
     tools.hidden = true;
     libBar.hidden = true;
-    sentImport.hidden = false;
     sentSortBar.hidden = false;
     sl.hidden = false;
     const items = applySort(state.sentences.slice(), sentSort);
@@ -2045,7 +2042,10 @@ function startSentencePractice() {
           <div class="sb-wheel-selector"></div>
         </div>
         <textarea class="sb-textbox" id="sp-textbox" placeholder="Tap words from the wheel…" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
-        <button class="btn sb-reveal-btn" id="sp-reveal-btn">Reveal</button>
+        <div class="sp-build-btns">
+          <button class="btn sb-reveal-btn" id="sp-reveal-btn">Reveal</button>
+          <button class="btn sp-skip-btn" id="sp-skip-btn">Skip →</button>
+        </div>
       </div>
 
       <div class="sb-result" id="sp-result" hidden>
@@ -2133,6 +2133,11 @@ function startSentencePractice() {
     });
 
     $('#sp-close').onclick = closeGame;
+
+    $('#sp-skip-btn').onclick = () => {
+      const next = pickSentence(currentSentence.id);
+      loadSentence(next);
+    };
 
     $('#sp-reveal-btn').onclick = () => {
       const attempt = $('#sp-textbox').value.trim();

@@ -442,7 +442,8 @@ button {
 
 #lib-search:focus { outline: none; border-color: var(--accent); }
 
-#lib-sort {
+#lib-sort,
+#sent-sort {
   height: 38px;
   padding: 0 10px;
   border-radius: var(--r-sm);
@@ -456,6 +457,22 @@ button {
   appearance: none;
   cursor: pointer;
 }
+
+.sent-import-label {
+  flex: 1;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--hair);
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sent-import-label:active { background: var(--bg-sunken); }
 
 .list {
   overflow-y: auto;
@@ -2337,6 +2354,29 @@ button {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* Build phase reveal + skip row */
+.sp-build-btns {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.sp-build-btns .sb-reveal-btn { flex: 1; }
+
+.sp-skip-btn {
+  flex: none;
+  height: 48px;
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font-size: 15px;
+  font-weight: 600;
+  border: 1.5px solid var(--hair-strong);
+  cursor: pointer;
+  padding: 0 18px;
+}
+.sp-skip-btn:active { background: var(--bg-sunken); }
 
 /* Correct translation row with play button */
 .sp-translation-row {
