@@ -329,7 +329,18 @@ $('#btn-shuffle').onclick = doShuffle;
 /* =========================================================
    12. LIBRARY VIEW
    ========================================================= */
-let libFilter = '', libSort = 'az';
+let libFilter = '', libSort = 'az', sentSort = 'az';
+
+function applySort(list, sortKey) {
+  switch (sortKey) {
+    case 'za':       list.sort((a, b) => b.input.localeCompare(a.input)); break;
+    case 'coldwarm': list.sort((a, b) => a.mastery - b.mastery); break;
+    case 'warmcold': list.sort((a, b) => b.mastery - a.mastery); break;
+    case 'pinned':   list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.input.localeCompare(b.input)); break;
+    default:         list.sort((a, b) => a.input.localeCompare(b.input));
+  }
+  return list;
+}
 
 function filteredSorted() {
   let list = state.phrases.slice();
@@ -341,13 +352,7 @@ function filteredSorted() {
       (p.phonetics && p.phonetics.toLowerCase().includes(q))
     );
   }
-  switch (libSort) {
-    case 'za':       list.sort((a, b) => b.input.localeCompare(a.input)); break;
-    case 'coldwarm': list.sort((a, b) => a.mastery - b.mastery); break;
-    case 'warmcold': list.sort((a, b) => b.mastery - a.mastery); break;
-    default:         list.sort((a, b) => a.input.localeCompare(b.input));
-  }
-  return list;
+  return applySort(list, libSort);
 }
 
 let libListMode = 'words';
@@ -367,8 +372,9 @@ function renderLibrary() {
   const sentImport = $('#sentence-import-bar');
 
   const sentLearnBar = $('#sent-learn-prompt-bar');
+  const sentSortBar = $('#sentence-sort-bar');
   // hide everything first
-  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport, sentLearnBar].forEach(el => { el.hidden = true; });
+  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport, sentLearnBar, sentSortBar].forEach(el => { el.hidden = true; });
   tools.hidden = false;
   libBar.hidden = false;
 
@@ -410,9 +416,10 @@ function renderLibrary() {
     tools.hidden = true;
     libBar.hidden = true;
     sentImport.hidden = false;
+    sentSortBar.hidden = false;
     sl.hidden = false;
-    const items = state.sentences;
-    sentEmpty.hidden = items.length > 0;
+    const items = applySort(state.sentences.slice(), sentSort);
+    sentEmpty.hidden = state.sentences.length > 0;
     sl.innerHTML = items.map(s => {
       const b = band(s.mastery);
       return `<li class="list__item" data-id="${s.id}" data-type="sentence">
@@ -514,6 +521,11 @@ $('#lib-search').addEventListener('input', e => {
 
 $('#lib-sort').addEventListener('change', e => {
   libSort = e.target.value;
+  renderLibrary();
+});
+
+$('#sent-sort').addEventListener('change', e => {
+  sentSort = e.target.value;
   renderLibrary();
 });
 

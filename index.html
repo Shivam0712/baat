@@ -83,6 +83,7 @@
         <option value="za">Z → A</option>
         <option value="coldwarm">Cold → Hot</option>
         <option value="warmcold">Hot → Cold</option>
+        <option value="pinned">Saved First</option>
       </select>
     </div>
     <ul class="list" id="list"></ul>
@@ -95,6 +96,15 @@
         Import .txt
         <input type="file" id="sentence-file-upload" accept=".txt,text/plain" hidden>
       </label>
+    </div>
+    <div class="lib-bar" id="sentence-sort-bar" hidden>
+      <select id="sent-sort">
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
+        <option value="coldwarm">Cold → Hot</option>
+        <option value="warmcold">Hot → Cold</option>
+        <option value="pinned">Saved First</option>
+      </select>
     </div>
     <ul class="list" id="sentence-list" hidden></ul>
     <div class="empty" id="library-empty" hidden>
