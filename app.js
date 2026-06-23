@@ -419,14 +419,14 @@ function renderLibrary() {
     sentEmpty.hidden = state.sentences.length > 0;
     sl.innerHTML = items.map(s => {
       const b = band(s.mastery);
-      return `<li class="list__item" data-id="${s.id}" data-type="sentence">
-        <span class="list__bar" style="--tier-color:${bandColor(b)}"></span>
+      return `<li class="list__item${s.flagged ? ' is-flagged' : ''}" data-id="${s.id}" data-type="sentence">
+        <span class="list__bar" style="--tier-color:${s.flagged ? 'var(--hot)' : bandColor(b)}"></span>
         <button class="list__play opt-play" data-phrase="${esc(s.translation)}" aria-label="Play">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
         </button>
         <span class="list__text">
           <span class="list__phrase">${esc(s.input)}</span>
-          <span class="list__sub">${b} · ${Math.round(s.mastery)}%</span>
+          <span class="list__sub">${s.flagged ? '🚩 flagged · ' : ''}${b} · ${Math.round(s.mastery)}%</span>
         </span>
         <button class="list__pin${s.pinned ? ' is-pinned' : ''}" data-id="${s.id}" data-type="sentence" aria-label="${s.pinned ? 'Unpin' : 'Pin'}">
           <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="${s.pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -2030,7 +2030,10 @@ function startSentencePractice() {
     <div class="sb-body">
       <div class="sb-build" id="sp-build">
         <div class="sp-sentence-card">
-          <span class="sp-sentence-label">Build the phonetics for:</span>
+          <div class="sp-sentence-card-top">
+            <span class="sp-sentence-label">Build the phonetics for:</span>
+            <button class="sp-flag-btn${sentence.flagged ? ' is-flagged' : ''}" id="sp-flag-btn" aria-label="Flag for deletion" title="Flag for deletion">🚩</button>
+          </div>
           <p class="sp-sentence-text" id="sp-sentence-text">${esc(sentence.input)}</p>
         </div>
         <div class="sb-wheel-wrap">
@@ -2137,6 +2140,18 @@ function startSentencePractice() {
     $('#sp-skip-btn').onclick = () => {
       const next = pickSentence(currentSentence.id);
       loadSentence(next);
+    };
+
+    $('#sp-flag-btn').onclick = () => {
+      if (currentSentence.id.startsWith('raw:')) { toast('Raw sentences can be removed from the Sentence Learn List.'); return; }
+      const s = state.sentences.find(x => x.id === currentSentence.id);
+      if (!s) return;
+      s.flagged = !s.flagged;
+      currentSentence = s;
+      save();
+      const btn = $('#sp-flag-btn');
+      btn.classList.toggle('is-flagged', s.flagged);
+      toast(s.flagged ? 'Flagged — find it in Library → Sentences' : 'Unflagged');
     };
 
     $('#sp-reveal-btn').onclick = () => {
