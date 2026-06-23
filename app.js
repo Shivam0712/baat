@@ -977,7 +977,7 @@ function startMaster10() {
   });
 
   $('#m10-start').onclick = () => {
-    const entries = allPhrases.filter(p => selected.has(p.id));
+    const entries = shuffle(allPhrases.filter(p => selected.has(p.id)));
     gameSession = { type: 'master10', entries, index: 0, score: 0, answered: 0, gameTypes: ['match', 'choice', 'listen', 'listenfill', 'flip'], gameTypeIndex: 0, phase: 'preview' };
     renderGame();
   };
@@ -1025,7 +1025,7 @@ function startGame(type) {
   };
 
   $('#game-start').onclick = () => {
-    const entries = weightedSample(state.phrases, batchSize);
+    const entries = shuffle(weightedSample(state.phrases, batchSize));
     gameSession = { type, entries, index: 0, score: 0, answered: 0 };
     renderGame();
   };
@@ -1059,6 +1059,7 @@ function renderGame() {
       if (gs.gameTypeIndex >= gs.gameTypes.length - 1) { showResult(); return; }
       gs.gameTypeIndex++;
       gs.index = 0;
+      gs.entries = shuffle(gs.entries);
       const nextType = gs.gameTypes[gs.gameTypeIndex];
       gameEl.innerHTML = `
         <div class="game__bar">
@@ -1238,14 +1239,15 @@ function renderMatch(body) {
   const chunkSize = Math.min(CONFIG.MATCH_PAIRS, remaining);
   const chunk = gs.entries.slice(gs.index, gs.index + chunkSize);
 
+  const leftItems  = shuffle(chunk.map(e => ({ id: e.id, text: e.input })));
   const rightItems = shuffle(chunk.map(e => ({ id: e.id, text: e.phonetics })));
 
   body.innerHTML = `
     <div class="match-round-header">Match phrase to pronunciation</div>
     <div class="match">
       <div class="match-col" id="match-left">
-        ${chunk.map(e => `
-          <button class="chip" data-id="${e.id}" data-col="left">${esc(e.input)}</button>`).join('')}
+        ${leftItems.map(l => `
+          <button class="chip" data-id="${l.id}" data-col="left">${esc(l.text)}</button>`).join('')}
       </div>
       <div class="match-col" id="match-right">
         ${rightItems.map(r => `
