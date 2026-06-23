@@ -366,8 +366,9 @@ function renderLibrary() {
   const syncBar = $('#wish-sync-bar');
   const sentImport = $('#sentence-import-bar');
 
+  const sentLearnBar = $('#sent-learn-prompt-bar');
   // hide everything first
-  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport].forEach(el => { el.hidden = true; });
+  [ul, wl, sl, swl, empty, wishEmpty, sentEmpty, swEmpty, syncBar, sentImport, sentLearnBar].forEach(el => { el.hidden = true; });
   tools.hidden = false;
   libBar.hidden = false;
 
@@ -392,6 +393,7 @@ function renderLibrary() {
     tools.hidden = true;
     libBar.hidden = true;
     swl.hidden = false;
+    $('#sent-learn-prompt-bar').hidden = false;
     const items = state.sentWishlist;
     swEmpty.hidden = items.length > 0;
     swl.innerHTML = items.map((w, i) => `
@@ -477,6 +479,23 @@ $('#sent-wish-list').addEventListener('click', e => {
     renderLibrary();
   }
 });
+
+$('#btn-sent-learn-prompt').onclick = () => {
+  const items = state.sentWishlist || [];
+  if (!items.length) { toast('No sentences in your Sentence Learn List.'); return; }
+  const PROMPT = `You are a Thai language teacher helping a beginner. Translate the following English sentences into Thai. For each sentence provide exactly:
+
+English: [original sentence]
+Translation: [Thai script]
+Phonetics: [romanized phonetics]
+Note: [brief usage note]
+
+Separate entries with a blank line. Do not include any extra text outside the entries.
+
+Sentences to translate:
+${items.join('\n')}`;
+  openCopyPrompt('Sentence Learn List Prompt', PROMPT);
+};
 
 $('#btn-wish-sync').onclick = () => {
   const phraseSet = new Set(state.phrases.map(p => p.input.toLowerCase()));
