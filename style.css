@@ -1826,6 +1826,69 @@ button {
   pointer-events: none;
 }
 
+/* ── Phonetics search ── */
+.sb-search-wrap {
+  flex-shrink: 0;
+}
+
+.sb-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hair-strong);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.sb-search:focus { border-color: var(--accent); }
+
+.sb-search-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  max-height: 208px;
+  overflow-y: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hair-strong);
+  background: var(--bg-sunken);
+}
+
+.sb-search-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--hair);
+}
+.sb-search-item:last-child { border-bottom: none; }
+.sb-search-item:active { background: var(--bg-elev); }
+
+.sb-search-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.sb-search-empty {
+  padding: 14px;
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* Persistent bar in Sentence Practice (flag + sentence, always visible) */
+.sp-persistent-bar {
+  flex-shrink: 0;
+}
+
 /* ── Slot-machine wheel ── */
 .sb-wheel-wrap {
   /* shows exactly 3 + 2×½ items = 4 × 52px = 208px */

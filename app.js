@@ -1627,7 +1627,10 @@ function startSentenceBuilder() {
     </div>
     <div class="sb-body">
       <div class="sb-build" id="sb-build">
-        <div class="sb-wheel-wrap">
+        <div class="sb-search-wrap">
+          <input class="sb-search" id="sb-search" type="search" placeholder="Search phonetics…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+        </div>
+        <div class="sb-wheel-wrap" id="sb-wheel-wrap">
           <div class="sb-wheel" id="sb-wheel">
             <div style="height:${PAD}px;flex-shrink:0"></div>
             ${phrases.map(p => `<div class="sb-wheel-item" data-id="${p.id}">${esc(p.phonetics)}</div>`).join('')}
@@ -1635,6 +1638,7 @@ function startSentenceBuilder() {
           </div>
           <div class="sb-wheel-selector"></div>
         </div>
+        <ul class="sb-search-list" id="sb-search-list" hidden></ul>
         <textarea class="sb-textbox" id="sb-textbox" placeholder="Tap a word on the wheel…" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
         <button class="btn sb-reveal-btn" id="sb-reveal-btn">Reveal</button>
       </div>
@@ -1663,6 +1667,20 @@ function startSentenceBuilder() {
 
   const wheel = $('#sb-wheel');
 
+  function insertWord(word, phraseId, tb) {
+    const tapped = phrases.find(p => p.id === phraseId);
+    if (tapped) droppedPhrases.push(tapped);
+    const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
+    const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
+    const before = tb.value.slice(0, start);
+    const after  = tb.value.slice(end);
+    const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
+    tb.value = before + gap + word + after;
+    const cursor = start + gap.length + word.length;
+    tb.focus();
+    tb.setSelectionRange(cursor, cursor);
+  }
+
   // Index-based scroll: item[i] centers at scrollTop = i × ITEM_H
   function scrollToIdx(i, smooth) {
     wheel.scrollTo({ top: i * ITEM_H, behavior: smooth ? 'smooth' : 'instant' });
@@ -1680,7 +1698,6 @@ function startSentenceBuilder() {
   }
 
   wheel.addEventListener('scroll', updateHighlight, { passive: true });
-  // Start at first item
   scrollToIdx(0, false);
   requestAnimationFrame(updateHighlight);
 
@@ -1691,21 +1708,33 @@ function startSentenceBuilder() {
     const idx = items.indexOf(item);
     scrollToIdx(idx, true);
     items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
-    const tapped = phrases.find(p => p.id === item.dataset.id);
-    if (tapped) droppedPhrases.push(tapped);
+    insertWord(item.textContent.trim(), item.dataset.id, $('#sb-textbox'));
+  });
 
-    // Insert at cursor, or append if cursor isn't in the box
-    const tb = $('#sb-textbox');
-    const word = item.textContent.trim();
-    const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
-    const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
-    const before = tb.value.slice(0, start);
-    const after  = tb.value.slice(end);
-    const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
-    tb.value = before + gap + word + after;
-    const cursor = start + gap.length + word.length;
-    tb.focus();
-    tb.setSelectionRange(cursor, cursor);
+  // Search
+  const sbSearch = $('#sb-search');
+  const sbWheelWrap = $('#sb-wheel-wrap');
+  const sbSearchList = $('#sb-search-list');
+
+  sbSearch.addEventListener('input', () => {
+    const q = sbSearch.value.trim().toLowerCase();
+    if (!q) {
+      sbWheelWrap.hidden = false;
+      sbSearchList.hidden = true;
+      return;
+    }
+    const matches = phrases.filter(p => p.phonetics.toLowerCase().includes(q) || (p.input || '').toLowerCase().includes(q));
+    sbWheelWrap.hidden = true;
+    sbSearchList.hidden = false;
+    sbSearchList.innerHTML = matches.length
+      ? matches.map(p => `<li class="sb-search-item" data-id="${p.id}" data-word="${esc(p.phonetics)}">${esc(p.phonetics)}<span class="sb-search-sub">${esc(p.input || '')}</span></li>`).join('')
+      : `<li class="sb-search-empty">No matches</li>`;
+  });
+
+  sbSearchList.addEventListener('click', e => {
+    const item = e.target.closest('.sb-search-item');
+    if (!item) return;
+    insertWord(item.dataset.word, item.dataset.id, $('#sb-textbox'));
   });
 
   $('#sb-close').onclick = closeGame;
@@ -2028,15 +2057,20 @@ function startSentencePractice() {
       <span class="game__score" id="sp-score">Right: 0 · Wrong: 0</span>
     </div>
     <div class="sb-body">
-      <div class="sb-build" id="sp-build">
-        <div class="sp-sentence-card">
+      <div class="sp-persistent-bar">
+        <div class="sp-sentence-card" id="sp-sentence-card">
           <div class="sp-sentence-card-top">
             <span class="sp-sentence-label">Build the phonetics for:</span>
             <button class="sp-flag-btn${sentence.flagged ? ' is-flagged' : ''}" id="sp-flag-btn" aria-label="Flag for deletion" title="Flag for deletion">🚩</button>
           </div>
           <p class="sp-sentence-text" id="sp-sentence-text">${esc(sentence.input)}</p>
         </div>
-        <div class="sb-wheel-wrap">
+      </div>
+      <div class="sb-build" id="sp-build">
+        <div class="sb-search-wrap">
+          <input class="sb-search" id="sp-search" type="search" placeholder="Search phonetics…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+        </div>
+        <div class="sb-wheel-wrap" id="sp-wheel-wrap">
           <div class="sb-wheel" id="sp-wheel">
             <div style="height:${PAD}px;flex-shrink:0"></div>
             ${phrases.map(p => `<div class="sb-wheel-item" data-id="${p.id}">${esc(p.phonetics)}</div>`).join('')}
@@ -2044,6 +2078,7 @@ function startSentencePractice() {
           </div>
           <div class="sb-wheel-selector"></div>
         </div>
+        <ul class="sb-search-list" id="sp-search-list" hidden></ul>
         <textarea class="sb-textbox" id="sp-textbox" placeholder="Tap words from the wheel…" rows="2" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"></textarea>
         <div class="sp-build-btns">
           <button class="btn sb-reveal-btn" id="sp-reveal-btn">Reveal</button>
@@ -2098,6 +2133,20 @@ function startSentencePractice() {
     bindHandlers();
   }
 
+  function insertWordSP(word, phraseId, tb) {
+    const tapped = phrases.find(p => p.id === phraseId);
+    if (tapped) droppedPhrases.push(tapped);
+    const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
+    const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
+    const before = tb.value.slice(0, start);
+    const after  = tb.value.slice(end);
+    const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
+    tb.value = before + gap + word + after;
+    const cursor = start + gap.length + word.length;
+    tb.focus();
+    tb.setSelectionRange(cursor, cursor);
+  }
+
   function bindHandlers() {
     const wheel = $('#sp-wheel');
 
@@ -2119,20 +2168,33 @@ function startSentencePractice() {
       const idx = items.indexOf(item);
       scrollToIdx(idx, true);
       items.forEach((el, i) => el.classList.toggle('is-center', i === idx));
-      const tapped = phrases.find(p => p.id === item.dataset.id);
-      if (tapped) droppedPhrases.push(tapped);
+      insertWordSP(item.textContent.trim(), item.dataset.id, $('#sp-textbox'));
+    });
 
-      const tb = $('#sp-textbox');
-      const word = item.textContent.trim();
-      const start = (document.activeElement === tb) ? tb.selectionStart : tb.value.length;
-      const end   = (document.activeElement === tb) ? tb.selectionEnd   : tb.value.length;
-      const before = tb.value.slice(0, start);
-      const after  = tb.value.slice(end);
-      const gap = before.length > 0 && !before.endsWith(' ') ? ' ' : '';
-      tb.value = before + gap + word + after;
-      const cursor = start + gap.length + word.length;
-      tb.focus();
-      tb.setSelectionRange(cursor, cursor);
+    // Search
+    const spSearch = $('#sp-search');
+    const spWheelWrap = $('#sp-wheel-wrap');
+    const spSearchList = $('#sp-search-list');
+
+    spSearch.addEventListener('input', () => {
+      const q = spSearch.value.trim().toLowerCase();
+      if (!q) {
+        spWheelWrap.hidden = false;
+        spSearchList.hidden = true;
+        return;
+      }
+      const matches = phrases.filter(p => p.phonetics.toLowerCase().includes(q) || (p.input || '').toLowerCase().includes(q));
+      spWheelWrap.hidden = true;
+      spSearchList.hidden = false;
+      spSearchList.innerHTML = matches.length
+        ? matches.map(p => `<li class="sb-search-item" data-id="${p.id}" data-word="${esc(p.phonetics)}">${esc(p.phonetics)}<span class="sb-search-sub">${esc(p.input || '')}</span></li>`).join('')
+        : `<li class="sb-search-empty">No matches</li>`;
+    });
+
+    spSearchList.addEventListener('click', e => {
+      const item = e.target.closest('.sb-search-item');
+      if (!item) return;
+      insertWordSP(item.dataset.word, item.dataset.id, $('#sp-textbox'));
     });
 
     $('#sp-close').onclick = closeGame;
