@@ -1464,25 +1464,14 @@ function showResult() {
 /* =========================================================
    19. PROGRESS VIEW
    ========================================================= */
-function renderProgress() {
-  const el = $('#progress-view');
-  const total = state.phrases.length;
-
-  if (!total) {
-    el.innerHTML = `<div class="prog-empty"><p>No phrases yet.<br>Add some in the Library.</p></div>`;
-    return;
-  }
-
-  const { warmThresh, hotThresh } = getBandThresholds();
-  const coldList = state.phrases.filter(p => band(p.mastery) === 'cold');
-  const warmList = state.phrases.filter(p => band(p.mastery) === 'warm');
-  const hotList  = state.phrases.filter(p => band(p.mastery) === 'hot');
-
-  const nCold = coldList.length, nWarm = warmList.length, nHot = hotList.length;
-  const avgMastery = state.phrases.reduce((s, p) => s + p.mastery, 0) / total;
+function buildProgressChart(items, label, warmThresh, hotThresh) {
+  const total = items.length;
+  const nCold = items.filter(p => p.mastery < warmThresh).length;
+  const nWarm = items.filter(p => p.mastery >= warmThresh && p.mastery < hotThresh).length;
+  const nHot  = items.filter(p => p.mastery >= hotThresh).length;
+  const avgMastery = items.reduce((s, p) => s + p.mastery, 0) / total;
   const overallPct = Math.round(avgMastery);
 
-  // SVG donut
   const R = 80, SW = 26, CX = 100, CY = 100;
   const C = 2 * Math.PI * R;
   const GAP = total > 1 ? 3 : 0;
@@ -1500,45 +1489,67 @@ function renderProgress() {
   const coldArc = (nCold / total) * C;
   const warmArc = (nWarm / total) * C;
 
-  const svgSegs = seg(nCold, 'var(--cold)', 0)
-    + seg(nWarm, 'var(--warm)', coldArc)
-    + seg(nHot,  'var(--hot)',  coldArc + warmArc);
+  return `
+    <div class="prog-section">
+      <h3 class="prog-section-title">${label}</h3>
+      <div class="prog-chart-wrap">
+        <svg class="prog-donut" viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--hair)" stroke-width="${SW}"/>
+          ${seg(nCold, 'var(--cold)', 0)}
+          ${seg(nWarm, 'var(--warm)', coldArc)}
+          ${seg(nHot,  'var(--hot)',  coldArc + warmArc)}
+          <text x="${CX}" y="${CY - 10}" class="prog-center-pct" text-anchor="middle" dominant-baseline="middle">${overallPct}%</text>
+          <text x="${CX}" y="${CY + 16}" class="prog-center-label" text-anchor="middle" dominant-baseline="middle">mastery</text>
+        </svg>
+      </div>
+      <div class="prog-legend">
+        <div class="prog-legend-item">
+          <span class="prog-legend-dot" style="background:var(--cold)"></span>
+          <div class="prog-legend-text">
+            <span class="prog-legend-name">Cold</span>
+            <span class="prog-legend-count">${nCold} <span class="prog-legend-pct">${Math.round(nCold/total*100)}%</span></span>
+          </div>
+        </div>
+        <div class="prog-legend-item">
+          <span class="prog-legend-dot" style="background:var(--warm)"></span>
+          <div class="prog-legend-text">
+            <span class="prog-legend-name">Warm</span>
+            <span class="prog-legend-count">${nWarm} <span class="prog-legend-pct">${Math.round(nWarm/total*100)}%</span></span>
+          </div>
+        </div>
+        <div class="prog-legend-item">
+          <span class="prog-legend-dot" style="background:var(--hot)"></span>
+          <div class="prog-legend-text">
+            <span class="prog-legend-name">Hot</span>
+            <span class="prog-legend-count">${nHot} <span class="prog-legend-pct">${Math.round(nHot/total*100)}%</span></span>
+          </div>
+        </div>
+      </div>
+      <p class="prog-summary">${total} ${label.toLowerCase()} · ${nHot} mastered · ${nCold} to learn</p>
+      <p class="prog-thresholds">Warm ≥ ${warmThresh} · Hot ≥ ${hotThresh}</p>
+    </div>`;
+}
 
-  el.innerHTML = `
-    <div class="prog-chart-wrap">
-      <svg class="prog-donut" viewBox="0 0 200 200" aria-hidden="true">
-        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="var(--hair)" stroke-width="${SW}"/>
-        ${svgSegs}
-        <text x="${CX}" y="${CY - 10}" class="prog-center-pct" text-anchor="middle" dominant-baseline="middle">${overallPct}%</text>
-        <text x="${CX}" y="${CY + 16}" class="prog-center-label" text-anchor="middle" dominant-baseline="middle">mastery</text>
-      </svg>
-    </div>
+function renderProgress() {
+  const el = $('#progress-view');
+  const totalPhrases = state.phrases.length;
+  const totalSentences = state.sentences.length;
 
-    <div class="prog-legend">
-      <div class="prog-legend-item">
-        <span class="prog-legend-dot" style="background:var(--cold)"></span>
-        <div class="prog-legend-text">
-          <span class="prog-legend-name">Cold</span>
-          <span class="prog-legend-count">${nCold} <span class="prog-legend-pct">${Math.round(nCold/total*100)}%</span></span>
-        </div>
-      </div>
-      <div class="prog-legend-item">
-        <span class="prog-legend-dot" style="background:var(--warm)"></span>
-        <div class="prog-legend-text">
-          <span class="prog-legend-name">Warm</span>
-          <span class="prog-legend-count">${nWarm} <span class="prog-legend-pct">${Math.round(nWarm/total*100)}%</span></span>
-        </div>
-      </div>
-      <div class="prog-legend-item">
-        <span class="prog-legend-dot" style="background:var(--hot)"></span>
-        <div class="prog-legend-text">
-          <span class="prog-legend-name">Hot</span>
-          <span class="prog-legend-count">${nHot} <span class="prog-legend-pct">${Math.round(nHot/total*100)}%</span></span>
-        </div>
-      </div>
-    </div>
-    <p class="prog-summary">${total} phrase${total !== 1 ? 's' : ''} · ${nHot} mastered · ${nCold} to learn</p>
-    <p class="prog-thresholds">Warm ≥ ${Math.round(warmThresh)} · Hot ≥ ${Math.round(hotThresh)}</p>`;
+  if (!totalPhrases && !totalSentences) {
+    el.innerHTML = `<div class="prog-empty"><p>No phrases or sentences yet.<br>Add some in the Library.</p></div>`;
+    return;
+  }
+
+  const { warmThresh, hotThresh } = getBandThresholds();
+
+  let html = '';
+  if (totalPhrases) {
+    html += buildProgressChart(state.phrases, 'Phrases', warmThresh, hotThresh);
+  }
+  if (totalSentences) {
+    html += buildProgressChart(state.sentences, 'Sentences', 4, 10);
+  }
+  el.innerHTML = html;
 }
 
 /* =========================================================
