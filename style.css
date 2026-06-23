@@ -197,6 +197,32 @@ button {
 /* =========================================================
    BROWSE VIEW
    ========================================================= */
+.browse-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+  flex-shrink: 0;
+}
+
+.browse-tab {
+  flex: 1;
+  height: 34px;
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--hair);
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+
+.browse-tab.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .browse__stage {
   flex: 1;
   display: flex;

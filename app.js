@@ -144,8 +144,8 @@ function getBandThresholds() {
   const sorted = state.phrases.map(p => p.mastery).sort((a, b) => a - b);
   const p20 = sorted[Math.min(Math.floor(0.20 * n), n - 1)];
   const p85 = sorted[Math.min(Math.floor(0.85 * n), n - 1)];
-  const warmThresh = Math.max(5, p20);
-  const hotThresh  = Math.max(warmThresh + 5, p85);
+  const warmThresh = Math.min(20, Math.max(5, p20));
+  const hotThresh  = Math.min(50, Math.max(15, p85));
   return { warmThresh, hotThresh };
 }
 
@@ -153,6 +153,12 @@ function band(m) {
   const { warmThresh, hotThresh } = getBandThresholds();
   if (m < warmThresh) return 'cold';
   if (m < hotThresh)  return 'warm';
+  return 'hot';
+}
+
+function sentBand(m) {
+  if (m < 4)  return 'cold';
+  if (m < 10) return 'warm';
   return 'hot';
 }
 
@@ -282,6 +288,37 @@ $('#tabbar').addEventListener('click', e => {
    ========================================================= */
 let currentBrowseId = null;
 
+let browseMode = 'words'; // 'words' | 'sentences'
+let currentBrowseSentId = null;
+
+function renderBrowseSentenceCard(s) {
+  const stage = $('#browse-stage');
+  if (!s) {
+    stage.innerHTML = `<div class="card card--empty"><p class="card__input">No sentences yet</p><p>Add sentences in Library → Sentences.</p></div>`;
+    $('#btn-shuffle').disabled = true;
+    $('#browse-count').textContent = '0';
+    return;
+  }
+  $('#btn-shuffle').disabled = false;
+  const b = sentBand(s.mastery), col = bandColor(b);
+  stage.innerHTML = `
+    <div class="card swap-in" style="--glow:${col}">
+      <span class="card__tier">${b} · ${Math.round(s.mastery)}%</span>
+      <div class="card__input">${esc(s.input)}</div>
+      <div class="card__divider"></div>
+      ${s.translation ? `<div class="card__translation">${esc(s.translation)}</div>` : ''}
+      ${s.phonetics ? `<div class="card__phon-row">
+        <button class="btn-play" id="play-btn" aria-label="Play">▶</button>
+        <div class="card__phon">${esc(s.phonetics)}</div>
+      </div>` : ''}
+    </div>`;
+  if (s.translation) {
+    const pb = $('#play-btn');
+    if (pb) pb.onclick = () => speak(s.translation, pb);
+  }
+  $('#browse-count').textContent = String(state.sentences.length);
+}
+
 function renderBrowseCard(p) {
   const stage = $('#browse-stage');
   if (!p) {
@@ -309,8 +346,19 @@ function renderBrowseCard(p) {
 }
 
 function doShuffle() {
-  if (!state.phrases.length) { renderBrowseCard(null); return; }
   const old = $('#browse-stage .card');
+  if (browseMode === 'sentences') {
+    if (!state.sentences.length) { renderBrowseSentenceCard(null); return; }
+    const pool = state.sentences.filter(s => s.id !== currentBrowseSentId);
+    const pick = pool.length ? weightedPick(pool, null) : state.sentences[0];
+    currentBrowseSentId = pick.id;
+    applySentenceMastery(pick.id, CONFIG.DELTA_BROWSE);
+    save();
+    if (old) { old.classList.add('swap-out'); setTimeout(() => renderBrowseSentenceCard(pick), 160); }
+    else renderBrowseSentenceCard(pick);
+    return;
+  }
+  if (!state.phrases.length) { renderBrowseCard(null); return; }
   const pick = weightedPick(state.phrases, currentBrowseId);
   currentBrowseId = pick.id;
   applyMastery(pick.id, CONFIG.DELTA_BROWSE);
@@ -325,6 +373,28 @@ function doShuffle() {
 }
 
 $('#btn-shuffle').onclick = doShuffle;
+
+$('#browse-tabs').addEventListener('click', e => {
+  const tab = e.target.closest('.browse-tab');
+  if (!tab) return;
+  const mode = tab.dataset.tab;
+  if (mode === browseMode) return;
+  browseMode = mode;
+  $('#browse-tabs').querySelectorAll('.browse-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === mode));
+  const old = $('#browse-stage .card');
+  if (old) old.classList.add('swap-out');
+  if (mode === 'sentences') {
+    setTimeout(() => {
+      if (state.sentences.length) doShuffle();
+      else renderBrowseSentenceCard(null);
+    }, old ? 160 : 0);
+  } else {
+    setTimeout(() => {
+      if (state.phrases.length) doShuffle();
+      else renderBrowseCard(null);
+    }, old ? 160 : 0);
+  }
+});
 
 /* =========================================================
    12. LIBRARY VIEW
@@ -986,6 +1056,7 @@ function startMaster10() {
 function startGame(type) {
   if (type === 'master10') { startMaster10(); return; }
   if (type === 'sentbuild') { startSentenceBuilder(); return; }
+  if (type === 'sentmaster') { startSentenceMaster(); return; }
   if (type === 'sentpractice') { startSentencePractice(); return; }
   const maxBatch = state.phrases.length;
   const defaultBatch = Math.min(10, maxBatch);
@@ -1599,6 +1670,84 @@ function getDistractors(entry, field, count) {
 /* =========================================================
    19b. SENTENCE BUILDER
    ========================================================= */
+function startSentenceMaster() {
+  const allSentences = state.sentences.filter(s => s.phonetics);
+  if (!allSentences.length) { toast('Add sentences with phonetics via Library → Sentences first.'); return; }
+  if (!state.phrases.filter(p => p.phonetics).length) { toast('Add words with phonetics to use the wheel.'); return; }
+
+  const MAX = Math.min(10, allSentences.length);
+  const gameEl = $('#game');
+  gameEl.hidden = false;
+
+  const selected = new Set();
+
+  function autoPick() {
+    selected.clear();
+    const cold = allSentences.filter(s => sentBand(s.mastery) === 'cold').sort((a, b) => a.mastery - b.mastery);
+    const warm = shuffle(allSentences.filter(s => sentBand(s.mastery) === 'warm'));
+    const hot  = shuffle(allSentences.filter(s => sentBand(s.mastery) === 'hot'));
+    const hotPick  = hot.slice(0, 1);
+    const warmPick = warm.slice(0, 3);
+    const coldPick = cold.slice(0, MAX - hotPick.length - warmPick.length);
+    [...hotPick, ...warmPick, ...coldPick].forEach(s => selected.add(s.id));
+    if (selected.size < MAX) {
+      const used = selected;
+      allSentences.filter(s => !used.has(s.id)).slice(0, MAX - selected.size).forEach(s => selected.add(s.id));
+    }
+  }
+
+  autoPick();
+
+  function renderList() {
+    const sorted = applySort(allSentences.slice(), 'az');
+    $('#sm-list').innerHTML = sorted.map(s => {
+      const b = sentBand(s.mastery);
+      const isSel = selected.has(s.id);
+      return `<div class="m10-item${isSel ? ' is-selected' : ''}" data-id="${s.id}">
+        <span class="m10-check">${isSel ? '✓' : ''}</span>
+        <span class="m10-tier m10-tier--${b}"></span>
+        <span class="m10-text">${esc(s.input)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  function updateUI() {
+    $('#sm-start').disabled = selected.size === 0;
+    $('#sm-count').textContent = `${selected.size} selected`;
+  }
+
+  gameEl.innerHTML = `
+    <div class="game__bar">
+      <button class="game__close" id="sm-close" aria-label="Close">✕</button>
+      <span class="game__score" id="sm-count"></span>
+    </div>
+    <div class="game__body" style="overflow-y:auto;padding:16px 18px 24px;display:flex;flex-direction:column;gap:12px">
+      <h2 style="margin:0;font-size:18px">Master Sentences</h2>
+      <p style="margin:0;font-size:13px;color:var(--text-3)">Auto-picked ${MAX} sentences (cold-biased). Tap to toggle.</p>
+      <button class="btn btn--ghost" id="sm-autopick" style="flex:none">🎲 Auto-pick ${MAX}</button>
+      <div class="m10-list" id="sm-list"></div>
+      <button class="btn btn--primary" id="sm-start" style="flex:none">Start →</button>
+    </div>`;
+
+  renderList();
+  updateUI();
+
+  $('#sm-close').onclick = closeGame;
+  $('#sm-autopick').onclick = () => { autoPick(); renderList(); updateUI(); };
+  $('#sm-list').addEventListener('click', e => {
+    const item = e.target.closest('.m10-item');
+    if (!item) return;
+    const id = item.dataset.id;
+    if (selected.has(id)) { selected.delete(id); item.classList.remove('is-selected'); item.querySelector('.m10-check').textContent = ''; }
+    else { selected.add(id); item.classList.add('is-selected'); item.querySelector('.m10-check').textContent = '✓'; }
+    updateUI();
+  });
+  $('#sm-start').onclick = () => {
+    const pool = shuffle(allSentences.filter(s => selected.has(s.id)));
+    startSentencePractice({ boundedPool: pool });
+  };
+}
+
 function startSentenceBuilder() {
   const gameEl = $('#game');
   gameEl.hidden = false;
@@ -2016,11 +2165,18 @@ ${selected.join('\n')}`;
 /* =========================================================
    SENTENCE PRACTICE GAME
    ========================================================= */
-function startSentencePractice() {
-  // full entries (have phonetics) + raw sentWishlist items wrapped as simple targets
-  const fullSentences = state.sentences.filter(s => s.phonetics);
-  const rawSentences  = (state.sentWishlist || []).map(t => ({ id: 'raw:' + t, input: t, phonetics: null, translation: null }));
-  const sentences = [...fullSentences, ...rawSentences];
+function startSentencePractice(opts = {}) {
+  const { boundedPool = null } = opts;
+  const isBounded = Array.isArray(boundedPool);
+
+  let sentences;
+  if (isBounded) {
+    sentences = boundedPool;
+  } else {
+    const fullSentences = state.sentences.filter(s => s.phonetics);
+    const rawSentences  = (state.sentWishlist || []).map(t => ({ id: 'raw:' + t, input: t, phonetics: null, translation: null }));
+    sentences = [...fullSentences, ...rawSentences];
+  }
   if (!sentences.length) {
     toast('No sentences yet. Add some via the left panel or import via Library → Sentences.');
     return;
@@ -2040,9 +2196,18 @@ function startSentencePractice() {
   let currentSentence = null;
   let droppedPhrases = [];
   let judged = false;
+  let boundedIndex = 0; // only used in bounded mode
 
-  // Mastery-weighted pick: cold first, then warm, then hot
+  function scoreLabel() {
+    if (isBounded) return `${boundedIndex + 1} / ${sentences.length}`;
+    return `Right: ${score.right} · Wrong: ${score.wrong}`;
+  }
+
   function pickSentence(exclude) {
+    if (isBounded) {
+      const next = boundedIndex < sentences.length ? sentences[boundedIndex] : null;
+      return next;
+    }
     const pool = sentences.filter(s => s.id !== exclude);
     if (!pool.length) return sentences[0];
     const cold = pool.filter(s => band(s.mastery) === 'cold');
@@ -2056,7 +2221,7 @@ function startSentencePractice() {
     return `
     <div class="game__bar">
       <button class="btn game__close" id="sp-close" aria-label="Close">✕</button>
-      <span class="game__score" id="sp-score">Right: 0 · Wrong: 0</span>
+      <span class="game__score" id="sp-score">${scoreLabel()}</span>
     </div>
     <div class="sb-body">
       <div class="sp-persistent-bar">
@@ -2264,7 +2429,13 @@ function startSentencePractice() {
       judged = true;
       if (!currentSentence.id.startsWith('raw:')) applySentenceMastery(currentSentence.id, correct ? 1 : -1);
       if (correct) score.right++; else score.wrong++;
-      $('#sp-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
+      if (isBounded) {
+        boundedIndex++;
+        $('#sp-score').textContent = boundedIndex < sentences.length ? `${boundedIndex + 1} / ${sentences.length}` : `Done!`;
+        $('#sp-next').textContent = boundedIndex >= sentences.length ? 'See result →' : 'Next →';
+      } else {
+        $('#sp-score').textContent = `Right: ${score.right} · Wrong: ${score.wrong}`;
+      }
       $('#sp-next').disabled = false;
       $('#sp-right').classList.toggle('sb-judged--right', correct);
       $('#sp-wrong').classList.toggle('sb-judged--wrong', !correct);
@@ -2274,9 +2445,32 @@ function startSentencePractice() {
     $('#sp-wrong').onclick = () => judge(false);
 
     $('#sp-next').onclick = () => {
+      if (isBounded && boundedIndex >= sentences.length) { showSentenceResult(); return; }
       const next = pickSentence(currentSentence.id);
-      loadSentence(next);
+      if (next) loadSentence(next);
+      else showSentenceResult();
     };
+  }
+
+  function showSentenceResult() {
+    const total = score.right + score.wrong;
+    const pct = total ? Math.round(score.right / total * 100) : 0;
+    const gameEl = $('#game');
+    gameEl.innerHTML = `
+      <div class="game__bar">
+        <button class="game__close" id="sp-close-result" aria-label="Close">✕</button>
+        <span class="game__score">Master Sentences</span>
+      </div>
+      <div class="game__body" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:32px 24px">
+        <div class="result__score">${pct}%</div>
+        <p style="font-size:17px;font-weight:600;margin:0">${score.right} right · ${score.wrong} wrong</p>
+        <p style="font-size:13px;color:var(--text-3);margin:0">${sentences.length} sentences</p>
+        <button class="btn btn--primary" id="sp-play-again" style="width:100%;max-width:260px">Play Again</button>
+        <button class="btn btn--ghost" id="sp-done" style="width:100%;max-width:260px">Done</button>
+      </div>`;
+    $('#sp-close-result').onclick = closeGame;
+    $('#sp-done').onclick = closeGame;
+    $('#sp-play-again').onclick = () => startSentenceMaster();
   }
 
   loadSentence(pickSentence(null));
