@@ -144,8 +144,8 @@ function getBandThresholds() {
   const sorted = state.phrases.map(p => p.mastery).sort((a, b) => a - b);
   const p20 = sorted[Math.min(Math.floor(0.20 * n), n - 1)];
   const p85 = sorted[Math.min(Math.floor(0.85 * n), n - 1)];
-  const warmThresh = Math.min(20, Math.max(5, p20));
-  const hotThresh  = Math.min(50, Math.max(15, p85));
+  const warmThresh = Math.max(5, p20);
+  const hotThresh  = Math.max(warmThresh + 5, p85);
   return { warmThresh, hotThresh };
 }
 
