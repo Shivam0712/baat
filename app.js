@@ -26,7 +26,7 @@ const $ = s => document.querySelector(s);
 /* =========================================================
    3. STORE
    ========================================================= */
-let state = { version: 1, phrases: [], sentences: [], wishlist: [], sentWishlist: [], settings: { lang: CONFIG.DEFAULT_LANG } };
+let state = { version: 1, phrases: [], sentences: [], wishlist: [], sentWishlist: [], settings: { lang: CONFIG.DEFAULT_LANG, geminiKey: '' } };
 
 function genId() {
   return (typeof crypto !== 'undefined' && crypto.randomUUID)
@@ -40,7 +40,7 @@ function load() {
     if (raw) {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.phrases)) {
-        state = { version: 1, phrases: p.phrases, sentences: Array.isArray(p.sentences) ? p.sentences : [], wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], sentWishlist: Array.isArray(p.sentWishlist) ? p.sentWishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG } };
+        state = { version: 1, phrases: p.phrases, sentences: Array.isArray(p.sentences) ? p.sentences : [], wishlist: Array.isArray(p.wishlist) ? p.wishlist : [], sentWishlist: Array.isArray(p.sentWishlist) ? p.sentWishlist : [], settings: { lang: p.settings?.lang || CONFIG.DEFAULT_LANG, geminiKey: p.settings?.geminiKey || '' } };
       }
     }
   } catch (e) {
@@ -754,6 +754,7 @@ function openSettings() {
   sel.innerHTML = langs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
   sel.value = state.settings.lang;
   $('#lang-note').hidden = !!pickVoice(state.settings.lang);
+  $('#set-gemini-key').value = state.settings.geminiKey || '';
   $('#set-stat').textContent = `${state.phrases.length} phrases · ${state.sentences.length} sentences`;
   $('#settings').hidden = false;
 }
@@ -768,11 +769,19 @@ $('#set-lang').onchange = e => {
   $('#lang-note').hidden = !!pickVoice(state.settings.lang);
 };
 
+$('#set-gemini-key').oninput = e => {
+  state.settings.geminiKey = e.target.value.trim();
+  save();
+  if (typeof refreshChatKeyState === 'function') refreshChatKeyState();
+};
+
 /* =========================================================
    16. BACKUP EXPORT / IMPORT
    ========================================================= */
 $('#btn-export').onclick = () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  // Never include the API key in a downloadable backup
+  const exportState = { ...state, settings: { ...state.settings, geminiKey: '' } };
+  const blob = new Blob([JSON.stringify(exportState, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const d = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -2476,4 +2485,167 @@ function startSentencePractice(opts = {}) {
   loadSentence(pickSentence(null));
 }
 
-document.addEventListener('DOMContentLoaded', init);
+/* =========================================================
+   AI CHAT (Gemini Flash — free tier, key stored on-device)
+   ========================================================= */
+const CHAT_MODEL = 'gemini-2.0-flash';
+const CHAT_SYSTEM = `You are a warm, concise Thai language tutor for an English speaker learning everyday conversational Thai.
+When the user asks how to say something, reply with:
+1) the Thai script,
+2) a simple romanized pronunciation (hyphenated syllables),
+3) a one-line usage note.
+For general questions, keep answers short, friendly, and practical. Prefer common, polite spoken Thai. Avoid heavy markdown.`;
+
+let chatHistory = [];   // [{ role: 'user'|'model', text }]
+let chatBusy = false;
+
+function chatHasKey() { return !!(state.settings && state.settings.geminiKey); }
+
+function refreshChatKeyState() {
+  const hasKey = chatHasKey();
+  const nokey = $('#chat-nokey');
+  const inputRow = $('#chat-input-row');
+  if (!nokey || !inputRow) return;
+  nokey.hidden = hasKey;
+  inputRow.hidden = !hasKey;
+}
+
+function chatScrollBottom() {
+  const m = $('#chat-messages');
+  if (m) m.scrollTop = m.scrollHeight;
+}
+
+function chatAppend(role, text) {
+  const wrap = $('#chat-messages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + (role === 'user' ? 'chat-msg--user' : 'chat-msg--ai');
+  el.textContent = text;
+  wrap.appendChild(el);
+  chatScrollBottom();
+  return el;
+}
+
+function chatGreetIfEmpty() {
+  const wrap = $('#chat-messages');
+  if (chatHistory.length || wrap.children.length) return;
+  chatAppend('model', 'สวัสดี! I\'m your Thai tutor. Ask me how to say something, or anything about Thai. 🇹🇭');
+}
+
+function openChat() {
+  $('#chat-overlay').hidden = false;
+  $('#chat-fab').classList.add('is-open');
+  refreshChatKeyState();
+  chatGreetIfEmpty();
+  if (chatHasKey()) setTimeout(() => $('#chat-input').focus(), 50);
+}
+
+function closeChat() {
+  $('#chat-overlay').hidden = true;
+  $('#chat-fab').classList.remove('is-open');
+}
+
+function chatAutoGrow() {
+  const ta = $('#chat-input');
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+}
+
+async function streamGemini(history, onToken) {
+  const key = state.settings.geminiKey;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:streamGenerateContent?alt=sse&key=${encodeURIComponent(key)}`;
+  const body = {
+    systemInstruction: { parts: [{ text: CHAT_SYSTEM }] },
+    contents: history.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+  };
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { const j = await res.json(); detail = j?.error?.message || ''; } catch (e) {}
+    throw new Error(res.status === 400 ? 'Invalid request or API key.' : (detail || `Request failed (${res.status}).`));
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith('data:')) continue;
+      const payload = t.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const data = JSON.parse(payload);
+        const txt = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+        if (txt) onToken(txt);
+      } catch (e) { /* partial JSON across chunks — ignored, handled by buffer */ }
+    }
+  }
+}
+
+async function sendChat() {
+  if (chatBusy) return;
+  const input = $('#chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!chatHasKey()) { refreshChatKeyState(); return; }
+
+  input.value = '';
+  chatAutoGrow();
+  chatAppend('user', text);
+  chatHistory.push({ role: 'user', text });
+
+  chatBusy = true;
+  $('#chat-send').disabled = true;
+
+  const aiEl = chatAppend('model', '');
+  aiEl.innerHTML = '<span class="chat-typing"><i></i><i></i><i></i></span>';
+
+  let full = '', first = true;
+  try {
+    await streamGemini(chatHistory, tok => {
+      if (first) { aiEl.textContent = ''; first = false; }
+      full += tok;
+      aiEl.textContent = full;
+      chatScrollBottom();
+    });
+    if (first) aiEl.textContent = '(no response)';
+    if (full) chatHistory.push({ role: 'model', text: full });
+  } catch (e) {
+    aiEl.textContent = '⚠️ ' + (e.message || 'Something went wrong.');
+    aiEl.classList.remove('chat-msg--ai');
+    aiEl.classList.add('chat-msg--ai', 'chat-msg--error');
+    // drop the failed user turn from history so retry context stays clean
+    chatHistory.pop();
+  } finally {
+    chatBusy = false;
+    $('#chat-send').disabled = false;
+  }
+}
+
+function initChat() {
+  $('#chat-fab').onclick = openChat;
+  $('#chat-close').onclick = closeChat;
+  $('#chat-backdrop').onclick = closeChat;
+  $('#chat-send').onclick = sendChat;
+  $('#chat-open-settings').onclick = () => { closeChat(); openSettings(); };
+  $('#chat-clear').onclick = () => {
+    chatHistory = [];
+    $('#chat-messages').innerHTML = '';
+    chatGreetIfEmpty();
+  };
+  const input = $('#chat-input');
+  input.addEventListener('input', chatAutoGrow);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => { init(); initChat(); });
